@@ -7,7 +7,7 @@ from app.models import User
 
 from app.api.users import router as user_router
 from app.api.assets import router as asset_router
-from app.api.risk import router as risk_router
+from app.api.risks import router as risk_router
 
 
 Base.metadata.create_all(bind=engine)

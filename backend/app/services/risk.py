@@ -4,7 +4,7 @@ CyberRisk360
 Purpose:
 Risk scoring engine.
 """
-
+from app.core.constants import *
 
 def calculate_risk_score(
     impact: int,
@@ -35,12 +35,12 @@ def calculate_risk_level(
     """
 
     if score >= 20:
-        return "Critical"
+        return RISK_LEVEL_CRITICAL
 
     if score >= 15:
-        return "High"
+        return RISK_LEVEL_HIGH
 
     if score >= 10:
-        return "Medium"
+        return RISK_LEVEL_MEDIUM
 
-    return "Low"
+    return RISK_LEVEL_LOW

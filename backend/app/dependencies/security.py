@@ -22,7 +22,7 @@ def get_current_user(
     """
     Validate JWT token and return user payload.
     """
-    print(f"TOKEN RECEIVED: {token}")
+    # print(f"TOKEN RECEIVED: {token}")
     payload = decode_access_token(token)
 
     if payload is None:

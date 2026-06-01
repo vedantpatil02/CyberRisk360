@@ -8,8 +8,7 @@ from app.models.asset import Asset
 
 from app.schemas.asset import AssetCreate
 from app.dependencies.database import get_db
-
-
+from app.core.constants import *
 
 router = APIRouter()
 
@@ -22,8 +21,8 @@ def create_asset(
     db: Session = Depends(get_db),
     current_user=Depends(
         require_role(
-            "admin",
-            "analyst"
+            ROLE_ADMIN,
+            ROLE_ANALYST
         )
     )
 ):
