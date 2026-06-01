@@ -1,16 +1,19 @@
+"""
+CyberRisk360
+
+Purpose:
+Input validation helpers.
+"""
+
+
 def validate_cvss_score(
     score: float
 ):
     """
-    Validate CVSS score range.
+    Validate CVSS score.
+
+    Valid Range:
+    0.0 - 10.0
     """
 
-    if score < 0:
-
-        return False
-
-    if score > 10:
-
-        return False
-
-    return True
+    return 0 <= score <= 10
