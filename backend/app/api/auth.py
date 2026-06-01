@@ -1,14 +1,15 @@
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.models.user import User
 
-from app.schemas.auth import LoginRequest
 
 from app.services.security import verify_password
 from app.services.auth import create_access_token
 from app.dependencies.database import get_db
+from app.dependencies.security import get_current_user
 
 router = APIRouter()
 
@@ -16,14 +17,18 @@ router = APIRouter()
 
 @router.post("/login")
 def login(
-    request: LoginRequest, db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
 ):
-
-    
+    """
+    Authenticate user and return JWT token.
+    """
 
     user = (
         db.query(User)
-        .filter(User.email == request.email)
+        .filter(
+            User.email == form_data.username
+        )
         .first()
     )
 
@@ -34,7 +39,7 @@ def login(
         }
 
     if not verify_password(
-        request.password,
+        form_data.password,
         user.password
     ):
 
@@ -56,9 +61,7 @@ def login(
 
 
 
-from app.dependencies.security import (
-    get_current_user
-)
+
 
 @router.get("/me")
 def get_me(
