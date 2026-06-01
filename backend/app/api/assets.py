@@ -1,3 +1,4 @@
+from fastapi import Depends
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
 
@@ -6,14 +7,17 @@ from app.database import SessionLocal
 from app.models.asset import Asset
 
 from app.schemas.asset import AssetCreate
+from app.dependencies import get_db
+
+
 
 router = APIRouter()
 
 
 @router.post("/assets")
-def create_asset(asset: AssetCreate):
+def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
 
-    db: Session = SessionLocal()
+    
 
     new_asset = Asset(
         name=asset.name,
@@ -34,12 +38,7 @@ def create_asset(asset: AssetCreate):
 
 
 @router.get("/assets")
-def get_assets():
-
-    db: Session = SessionLocal()
-
-    assets = db.query(
-        Asset
-    ).all()
-
-    return assets
+def get_assets(
+    db: Session = Depends(get_db)
+):
+    return db.query(Asset).all()

@@ -1,18 +1,20 @@
 from fastapi import APIRouter
+from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models.user import User
 from app.schemas.user import UserCreate
 from app.services.security import hash_password
+from app.dependencies import get_db
 
 router = APIRouter()
 
 
 @router.post("/register")
-def register_user(user: UserCreate):
+def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
-    db: Session = SessionLocal()
+    
 
     existing_user = (
         db.query(User)

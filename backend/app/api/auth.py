@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -8,16 +9,17 @@ from app.schemas.auth import LoginRequest
 
 from app.services.security import verify_password
 from app.services.auth import create_access_token
+from app.dependencies import get_db
 
 router = APIRouter()
 
 
 @router.post("/login")
 def login(
-    request: LoginRequest
+    request: LoginRequest, db: Session = Depends(get_db)
 ):
 
-    db: Session = SessionLocal()
+    
 
     user = (
         db.query(User)
