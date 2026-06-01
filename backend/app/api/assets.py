@@ -18,6 +18,7 @@ router = APIRouter()
 def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
 
     
+    # Create a new asset record from request data
 
     new_asset = Asset(
         name=asset.name,
@@ -27,7 +28,8 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
         ip_address=asset.ip_address,
         environment=asset.environment
     )
-
+    
+    # Save asset into database
     db.add(new_asset)
 
     db.commit()

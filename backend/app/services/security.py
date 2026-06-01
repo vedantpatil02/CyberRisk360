@@ -1,3 +1,10 @@
+"""
+CyberRisk360
+
+Purpose:
+Password hashing and verification.
+"""
+
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(
@@ -7,6 +14,9 @@ pwd_context = CryptContext(
 
 
 def hash_password(password: str):
+    """
+    Hash user password before storing in database.
+    """
 
     password = password[:72]
 
@@ -17,6 +27,11 @@ def verify_password(
     plain_password,
     hashed_password
 ):
+
+    """
+    Verify user supplied password
+    against stored password hash.
+    """
 
     return pwd_context.verify(
         plain_password[:72],

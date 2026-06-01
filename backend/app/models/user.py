@@ -1,3 +1,10 @@
+"""
+CyberRisk360
+
+Purpose:
+Database model representing platform users.
+"""
+
 from sqlalchemy import Column
 from sqlalchemy import Integer
 from sqlalchemy import String
@@ -7,6 +14,9 @@ from app.database import Base
 
 
 class User(Base):
+    """
+    User table.
+    """
 
     __tablename__ = "users"
 

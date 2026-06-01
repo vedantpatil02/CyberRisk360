@@ -10,11 +10,13 @@ from app.dependencies import get_db
 
 router = APIRouter()
 
-
+"""
+Register a new user account.
+"""
 @router.post("/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
-    
+
 
     existing_user = (
         db.query(User)
@@ -22,17 +24,20 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         .first()
     )
 
+# Check whether a user already exists
     if existing_user:
         return {
             "message": "User already exists"
         }
 
+# Create new database user object
     new_user = User(
         username=user.username,
         email=user.email,
         password=hash_password(user.password)
     )
 
+# Store user record in database
     db.add(new_user)
     db.commit()
 
