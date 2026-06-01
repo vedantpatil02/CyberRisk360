@@ -12,6 +12,8 @@ from app.core.constants import *
 
 from app.services.risk import calculate_risk_score, calculate_risk_level
 from app.schemas.risk_update import RiskUpdate
+from app.services.risk_summary import initialize_summary
+
 
 router = APIRouter()
 
@@ -217,28 +219,47 @@ def get_risk_summary(
     )
 ):
     """
-    Return risk statistics.
+    Return dashboard statistics
+    for all risks.
     """
 
+    # Fetch all risks from database
     risks = db.query(
         Risk
     ).all()
 
-    summary = {
-        "critical": 0,
-        "high": 0,
-        "medium": 0,
-        "low": 0
-    }
+    # Initialize dashboard counters
+    summary = initialize_summary()
 
     for risk in risks:
 
-        level = (
-            risk.risk_level.lower()
-        )
+        # Count risk levels
+        if risk.risk_level:
 
-        if level in summary:
+            level = (
+                risk.risk_level.lower()
+            )
 
-            summary[level] += 1
+            if level in summary:
+
+                summary[level] += 1
+
+        # Count open risks
+        if (
+            risk.status
+            ==
+            RISK_STATUS_OPEN
+        ):
+
+            summary[SUMMARY_OPEN] += 1
+
+        # Count closed risks
+        elif (
+            risk.status
+            ==
+            RISK_STATUS_CLOSED
+        ):
+
+            summary[SUMMARY_CLOSED] += 1
 
     return summary
