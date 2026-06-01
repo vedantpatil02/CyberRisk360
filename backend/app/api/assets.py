@@ -7,15 +7,26 @@ from app.database import SessionLocal
 from app.models.asset import Asset
 
 from app.schemas.asset import AssetCreate
-from app.dependencies import get_db
+from app.dependencies.database import get_db
 
 
 
 router = APIRouter()
 
-
+from app.dependencies.rbac import (
+    require_role
+)
 @router.post("/assets")
-def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
+def create_asset(
+    asset: AssetCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            "admin",
+            "analyst"
+        )
+    )
+):
 
     
     # Create a new asset record from request data
@@ -28,7 +39,7 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
         ip_address=asset.ip_address,
         environment=asset.environment
     )
-    
+
     # Save asset into database
     db.add(new_asset)
 
@@ -39,8 +50,16 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
     }
 
 
+from app.dependencies.security import (
+    get_current_user
+)
+
 @router.get("/assets")
 def get_assets(
+    current_user=Depends(
+        get_current_user
+    ),
     db: Session = Depends(get_db)
 ):
     return db.query(Asset).all()
+

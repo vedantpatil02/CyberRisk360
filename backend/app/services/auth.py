@@ -1,5 +1,10 @@
+"""
+JWT token creation and validation.
+"""
+
 from datetime import datetime, timedelta
-from jose import jwt
+
+from jose import JWTError, jwt
 
 SECRET_KEY = "cyberrisk360-secret-key"
 ALGORITHM = "HS256"
@@ -7,6 +12,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
 def create_access_token(data: dict):
+    """
+    Generate JWT token.
+    """
 
     to_encode = data.copy()
 
@@ -23,3 +31,23 @@ def create_access_token(data: dict):
         SECRET_KEY,
         algorithm=ALGORITHM
     )
+
+
+def decode_access_token(token: str):
+    """
+    Validate and decode JWT token.
+    """
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        return payload
+
+    except JWTError:
+
+        return None
