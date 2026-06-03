@@ -1,0 +1,12 @@
+[
+    {
+        "control_id": "CIS-1",
+        "name": "Inventory and Control of Assets",
+        "description": "Maintain an inventory of assets."
+    },
+    {
+        "control_id": "CIS-5",
+        "name": "Account Management",
+        "description": "Manage user accounts securely."
+    }
+]

@@ -1,0 +1,12 @@
+[
+    {
+        "control_id": "A.5.1",
+        "name": "Information Security Policies",
+        "description": "Define and approve security policies."
+    },
+    {
+        "control_id": "A.8.1",
+        "name": "Asset Management",
+        "description": "Identify and manage organizational assets."
+    }
+]

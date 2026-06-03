@@ -1,0 +1,12 @@
+[
+    {
+        "control_id": "PR.AC-1",
+        "name": "Identity Management",
+        "description": "Manage identities and credentials."
+    },
+    {
+        "control_id": "PR.DS-1",
+        "name": "Data Protection",
+        "description": "Protect data at rest and in transit."
+    }
+]
