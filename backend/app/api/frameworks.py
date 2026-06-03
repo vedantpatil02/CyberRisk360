@@ -13,17 +13,73 @@ from app.dependencies.rbac import (
     require_role
 )
 
-from app.core.constants import (
-    ROLE_ADMIN,
-    ROLE_ANALYST,
-    ROLE_AUDITOR
-)
+from app.core.constants import *
 
 from app.services.framework_loader import (
     load_framework
 )
 
+from sqlalchemy.orm import Session
+
+from app.dependencies.database import (
+    get_db
+)
+
+from app.services.framework_importer import (
+    import_framework
+)
+
+
+
 router = APIRouter()
+
+@router.post(
+    "/frameworks/import/{framework_name}"
+)
+def import_framework_controls(
+    framework_name: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN
+        )
+    )
+):
+    """
+    Import framework controls
+    into database.
+    """
+
+    if (
+        framework_name
+        not in
+        FRAMEWORK_FILES
+    ):
+        return {
+            "message":
+            "Framework not found"
+        }
+
+    controls = load_framework(
+        FRAMEWORK_FILES[
+            framework_name
+        ]
+    )
+
+    imported_count = (
+        import_framework(
+            framework_name,
+            controls,
+            db
+        )
+    )
+
+    return {
+        "message":
+        "Framework imported",
+        "controls_imported":
+        imported_count
+    }
 
 
 @router.get(

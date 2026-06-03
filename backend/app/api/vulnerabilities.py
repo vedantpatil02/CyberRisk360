@@ -45,6 +45,10 @@ from app.services.vulnerability_summary import (
     initialize_vulnerability_summary
 )
 
+from app.services.control_suggester import (
+    suggest_controls
+)
+
 router = APIRouter()
 
 
@@ -344,3 +348,54 @@ def get_vulnerability_summary(
             summary["closed"] += 1
 
     return summary
+
+@router.get(
+    "/vulnerabilities/{vulnerability_id}/suggested-controls"
+)
+def get_suggested_controls(
+    vulnerability_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Suggest controls for a vulnerability.
+    """
+
+    vulnerability = (
+        db.query(
+            Vulnerability
+        )
+        .filter(
+            Vulnerability.id
+            ==
+            vulnerability_id
+        )
+        .first()
+    )
+
+    if not vulnerability:
+
+        return {
+            "message":
+            "Vulnerability not found"
+        }
+
+    suggestions = (
+        suggest_controls(
+            vulnerability.title
+        )
+    )
+
+    return {
+        "vulnerability":
+        vulnerability.title,
+
+        "suggested_controls":
+        suggestions
+    }
