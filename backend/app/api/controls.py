@@ -20,6 +20,10 @@ from app.dependencies.rbac import require_role
 
 from app.core.constants import ROLE_ADMIN, ROLE_ANALYST, ROLE_AUDITOR, CONTROL_STATUS_MISSING
 
+from app.services.compliance_summary import calculate_compliance_summary
+
+from app.schemas.control_update import ControlUpdate
+
 router = APIRouter()
 
 @router.post("/controls")
@@ -114,3 +118,77 @@ def get_control(
 
     return control
 
+@router.get(
+    "/compliance-summary"
+)
+def get_compliance_summary(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Return compliance dashboard
+    statistics.
+    """
+
+    controls = (
+        db.query(Control)
+        .all()
+    )
+
+    return (
+        calculate_compliance_summary(
+            controls
+        )
+    )
+
+@router.patch(
+    "/controls/{control_id}/status"
+)
+def update_control_status(
+    control_id: int,
+    control_update: ControlUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST
+        )
+    )
+):
+    """
+    Update control status.
+    """
+
+    control = (
+        db.query(Control)
+        .filter(
+            Control.id
+            ==
+            control_id
+        )
+        .first()
+    )
+
+    if not control:
+
+        return {
+            "message":
+            "Control not found"
+        }
+
+    control.status = (
+        control_update.status
+    )
+
+    db.commit()
+
+    return {
+        "message":
+        "Control updated"
+    }
