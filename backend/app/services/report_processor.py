@@ -18,6 +18,10 @@ from app.services.nessus_pdf_parser import (
     extract_findings
 )
 
+from app.services.nessus_pdf_parser import (
+    extract_findings
+)
+
 # Future imports
 # from app.services.nessus_xml_importer import parse_nessus_xml
 # from app.services.pdf_importer import parse_pdf_report
@@ -75,12 +79,20 @@ def process_report(
 
         return {
             "file_type": "pdf",
-            "pages": pdf_data["pages"],
-            "characters": len(
-                pdf_data["content"]
-            ),
+
+            "pages":
+                pdf_data["pages"],
+
+            "characters":
+                len(
+                    pdf_data["content"]
+                ),
+
             "findings_detected":
-                len(findings)
+                len(findings),
+
+            "sample":
+                findings[:5]
         }
     else:
 
