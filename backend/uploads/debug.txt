@@ -1,0 +1,141 @@
+Vulnerability Report
+Generated: 20/05/2026, 11:26:25
+# IP Address Service Version CVE ID CVSS Severity Description
+1 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2023-38408 9.8 CRITICAL The PKCS#11 feature in ssh-agent in OpenSSH before 9.3p2 has an insufficiently trustworthy search
+pa
+2 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-1908 9.8 CRITICAL The client in OpenSSH before 7.2 mishandles failed cookie generation for untrusted X11 forwarding an
+3 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2015-5600 8.5 HIGH The kbdint_next_device function in auth2-chall.c in sshd in OpenSSH through 6.9 does not properly re
+4 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2026-35414 8.1 HIGH OpenSSH before 10.3 mishandles the authorized_keys principals option in uncommon scenarios
+involving
+5 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2026-35386 8.1 HIGH In OpenSSH before 10.3, command execution can occur via shell metacharacters in a username within
+a 
+6 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2026-35385 8.1 HIGH In OpenSSH before 10.3, a file downloaded by scp may be installed setuid or setgid, an outcome contr
+7 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-0778 8.1 HIGH The (1) roaming_read and (2) roaming_write functions in roaming_common.c in the client in OpenSSH
+5.
+8 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2020-15778 7.4 HIGH scp in OpenSSH through 8.3p1 allows command injection in the scp.c toremote function, as
+demonstrate
+9 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-6515 7.8 HIGH The auth_password function in auth-passwd.c in sshd in OpenSSH before 7.3 does not limit password
+le
+10 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-10012 7.8 HIGH The shared memory manager (associated with pre-authentication compression) in sshd in OpenSSH
+before
+11 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2015-8325 7.8 HIGH The do_setup_env function in session.c in sshd in OpenSSH through 7.2p2, when the UseLogin
+feature i
+12 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-10708 7.5 HIGH sshd in OpenSSH before 7.4 allows remote attackers to cause a denial of service (NULL pointer derefe
+13 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-10009 7.5 HIGH Untrusted search path vulnerability in ssh-agent.c in ssh-agent in OpenSSH before 7.4 allows remote 
+14 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2021-41617 7.0 HIGH sshd in OpenSSH 6.2 through 8.x before 8.8, when certain non-default configurations are used, allows
+15 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-10010 7.0 HIGH sshd in OpenSSH before 7.4, when privilege separation is not used, creates forwarded Unix-domain
+soc# IP Address Service Version CVE ID CVSS Severity Description
+16 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2015-6564 6.9 MEDIUM Use-after-free vulnerability in the mm_answer_pam_free_ctx function in monitor.c in sshd in OpenSSH 
+17 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2019-6110 6.8 MEDIUM In OpenSSH 7.9, due to accepting and displaying arbitrary stderr output from the server, a malicious
+18 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2019-6109 6.8 MEDIUM An issue was discovered in OpenSSH 7.9. Due to missing character encoding in the progress display,
+a
+19 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2026-35387 6.5 MEDIUM OpenSSH before 10.3 can use unintended ECDSA algorithms. Listing of any ECDSA algorithm in
+PubkeyAcc
+20 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2023-51385 6.5 MEDIUM In ssh in OpenSSH before 9.6, OS command injection might occur if a user name or host name has
+shell
+21 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-0777 6.5 MEDIUM The resend_bytes function in roaming_common.c in the client in OpenSSH 5.x, 6.x, and 7.x before
+7.1p
+22 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-3115 6.4 MEDIUM Multiple CRLF injection vulnerabilities in session.c in sshd in OpenSSH before 7.2p2 allow remote au
+23 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2023-48795 5.9 MEDIUM The SSH transport protocol with certain OpenSSH extensions, found in OpenSSH before 9.6 and other
+pr
+24 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2020-14145 5.9 MEDIUM The client side in OpenSSH 5.7 through 8.4 has an Observable Discrepancy leading to an information l
+25 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2019-6111 5.9 MEDIUM An issue was discovered in OpenSSH 7.9. Due to the scp implementation being derived from 1983 rcp,
+t
+26 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2018-15473 5.3 MEDIUM OpenSSH through 7.7 is prone to a user enumeration vulnerability due to not delaying bailout for an 
+27 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-6210 5.9 MEDIUM sshd in OpenSSH before 7.3, when SHA256 or SHA512 are used for user password hashing, uses
+BLOWFISH 
+28 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2014-2653 5.8 MEDIUM The verify_host_key function in sshconnect.c in the client in OpenSSH 6.6 and earlier allows remote 
+29 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-10011 5.5 MEDIUM authfile.c in sshd in OpenSSH before 7.4 does not properly consider the effects of realloc on buffer
+30 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2018-20685 5.3 MEDIUM In OpenSSH 7.9, scp.c in the scp client allows remote SSH servers to bypass intended access restrict
+31 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2018-15919 5.3 MEDIUM Remotely observable behaviour in auth-gss2.c in OpenSSH through 7.8 could be used by remote
+attacker# IP Address Service Version CVE ID CVSS Severity Description
+32 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2017-15906 5.3 MEDIUM The process_open function in sftp-server.c in OpenSSH before 7.6 does not properly prevent write ope
+33 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2016-20012 5.3 MEDIUM OpenSSH through 8.7 allows remote attackers, who have a suspicion that a certain combination of
+user
+34 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2015-5352 4.3 MEDIUM The x11_open_helper function in channels.c in ssh in OpenSSH before 6.9, when ForwardX11Trusted
+mode
+35 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2021-36368 3.7 LOW An issue was discovered in OpenSSH before 8.9. If a client is using public-key authentication with a
+36 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2025-61985 0.0 LOW ssh in OpenSSH before 10.1 allows the '\0' character in an ssh:// URI, potentially leading to code e
+37 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2025-61984 0.0 LOW ssh in OpenSSH before 10.1 allows control characters in usernames that originate from certain possib
+38 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2026-35388 0.0 LOW OpenSSH before 10.3 omits connection multiplexing confirmation for proxy-mode multiplexing
+sessions.
+39 192.168.0.169 ssh OpenSSH 6.6.0 (protocol
+2.0)
+CVE-2015-6563 1.9 LOW The monitor component in sshd in OpenSSH before 7.0 on non-OpenBSD platforms accepts
+extraneous user
