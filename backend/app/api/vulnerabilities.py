@@ -45,8 +45,14 @@ from app.services.vulnerability_summary import (
     initialize_vulnerability_summary
 )
 
+
+
+from app.models.control import (
+    Control
+)
+
 from app.services.control_suggester import (
-    suggest_controls
+    suggest_control_names
 )
 
 router = APIRouter()
@@ -349,6 +355,7 @@ def get_vulnerability_summary(
 
     return summary
 
+
 @router.get(
     "/vulnerabilities/{vulnerability_id}/suggested-controls"
 )
@@ -365,8 +372,18 @@ def get_suggested_controls(
 ):
     """
     Suggest controls for a vulnerability.
+
+    Workflow:
+    Vulnerability
+        ↓
+    Keyword Match
+        ↓
+    Control Search
+        ↓
+    Recommended Controls
     """
 
+    # Retrieve vulnerability
     vulnerability = (
         db.query(
             Vulnerability
@@ -386,16 +403,50 @@ def get_suggested_controls(
             "Vulnerability not found"
         }
 
-    suggestions = (
-        suggest_controls(
+    # Get suggested control names
+    control_names = (
+        suggest_control_names(
             vulnerability.title
         )
     )
 
+    recommended_controls = []
+
+    # Search controls table
+    for control_name in control_names:
+
+        controls = (
+            db.query(Control)
+            .filter(
+                Control.name.ilike(
+                    f"%{control_name}%"
+                )
+            )
+            .all()
+        )
+
+        for control in controls:
+
+            recommended_controls.append(
+                {
+                    "control_id":
+                        control.control_id,
+
+                    "name":
+                        control.name,
+
+                    "framework":
+                        control.framework,
+
+                    "status":
+                        control.status
+                }
+            )
+
     return {
         "vulnerability":
-        vulnerability.title,
+            vulnerability.title,
 
-        "suggested_controls":
-        suggestions
+        "recommended_controls":
+            recommended_controls
     }

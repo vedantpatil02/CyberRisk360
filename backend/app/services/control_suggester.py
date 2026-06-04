@@ -3,44 +3,60 @@ CyberRisk360
 
 Purpose:
 Suggest controls based on
-vulnerability characteristics.
+vulnerability titles.
 """
 
+CONTROL_MAPPINGS = {
 
-def suggest_controls(
+    "sql injection": [
+        "Input Validation"
+    ],
+
+    "xss": [
+        "Output Encoding"
+    ],
+
+    "csrf": [
+        "Session Protection"
+    ],
+
+    "password": [
+        "Authentication"
+    ],
+
+    "tls": [
+        "Data Protection"
+    ],
+
+    "encryption": [
+        "Data Protection"
+    ],
+
+    "account": [
+        "Account Management"
+    ]
+}
+
+
+def suggest_control_names(
     vulnerability_title: str
 ):
     """
-    Return suggested controls
-    based on vulnerability title.
+    Return matching control names.
     """
 
     title = vulnerability_title.lower()
 
     suggestions = []
 
-    if "sql injection" in title:
+    for keyword, controls in (
+        CONTROL_MAPPINGS.items()
+    ):
 
-        suggestions.append(
-            "Input Validation"
-        )
+        if keyword in title:
 
-    if "xss" in title:
-
-        suggestions.append(
-            "Output Encoding"
-        )
-
-    if "password" in title:
-
-        suggestions.append(
-            "Authentication"
-        )
-
-    if "csrf" in title:
-
-        suggestions.append(
-            "Session Protection"
-        )
+            suggestions.extend(
+                controls
+            )
 
     return suggestions
