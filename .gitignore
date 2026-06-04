@@ -25,7 +25,5 @@ Thumbs.db
 # Node
 node_modules/
 
-uploads/
-*.csv
-*.pdf
-*.txt
+backend/uploads/*
+!backend/uploads/.gitkeep
