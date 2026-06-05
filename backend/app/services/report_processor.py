@@ -6,21 +6,17 @@ Process uploaded
 security reports.
 """
 
-from app.services.nessus_importer import (
-    parse_nessus_csv
+from app.importers.nessus_pdf_parser import (
+    extract_findings
 )
 
 from app.services.pdf_importer import (
     parse_pdf_report
 )
 
-from app.services.nessus_pdf_parser import (
-    extract_findings
-)
 
-from app.services.nessus_pdf_parser import (
-    extract_findings
-)
+
+
 
 # Future imports
 # from app.services.nessus_xml_importer import parse_nessus_xml
@@ -43,17 +39,9 @@ def process_report(
 
     if file_extension == "csv":
 
-        findings = (
-            parse_nessus_csv(
-                file_path
-            )
-        )
-
         return {
-            "file_type": "csv",
-            "findings": len(
-                findings
-            )
+            "message":
+            "CSV parser coming soon"
         }
 
     elif file_extension == "nessus":
@@ -64,11 +52,31 @@ def process_report(
         }
 
     elif file_extension == "pdf":
+        print("PDF DETECTED")
 
         pdf_data = (
             parse_pdf_report(
                 file_path
             )
+        )
+
+        print(
+            "CONTENT LENGTH:",
+            len(pdf_data["content"])
+        )
+
+        with open(
+            "uploads/live_content.txt",
+            "w",
+            encoding="utf-8"
+        ) as file:
+
+            file.write(
+                pdf_data["content"]
+            )
+
+        print(
+            pdf_data["content"][:2000]
         )
 
         findings = (

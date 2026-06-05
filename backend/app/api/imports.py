@@ -5,8 +5,8 @@ from fastapi import File
 
 import os
 
-from app.services.nessus_importer import (
-    parse_nessus_csv
+from app.importers.nessus_pdf_parser import (
+    extract_findings
 )
 
 from app.dependencies.rbac import (
