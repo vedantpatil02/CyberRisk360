@@ -52,7 +52,7 @@ def process_report(
         }
 
     elif file_extension == "pdf":
-        print("PDF DETECTED")
+        # print("PDF DETECTED")
 
         pdf_data = (
             parse_pdf_report(
@@ -75,9 +75,9 @@ def process_report(
                 pdf_data["content"]
             )
 
-        print(
-            pdf_data["content"][:2000]
-        )
+        # print(
+        #     pdf_data["content"][:2000]
+        # )
 
         findings = (
             extract_findings(
@@ -92,12 +92,13 @@ def process_report(
                 pdf_data["pages"],
 
             "characters":
-                len(
-                    pdf_data["content"]
-                ),
+                len(pdf_data["content"]),
 
             "findings_detected":
                 len(findings),
+
+            "findings":
+                findings,
 
             "sample":
                 findings[:5]
