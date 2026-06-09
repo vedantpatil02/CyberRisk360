@@ -29,12 +29,24 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         return {
             "message": "User already exists"
         }
+# Checks for valid role input
+    if user.role not in [
+        "admin",
+        "analyst",
+        "auditor"
+    ]:
+        return {
+            "message": "Invalid role"
+        }
 
 # Create new database user object
     new_user = User(
         username=user.username,
         email=user.email,
-        password=hash_password(user.password)
+        password=hash_password(
+            user.password
+        ),
+        role=user.role
     )
 
 # Store user record in database

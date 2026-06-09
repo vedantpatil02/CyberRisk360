@@ -41,17 +41,7 @@ class User(Base):
 
     role = Column(
         String,
-        default="admin"
-    )
-
-    role = Column(
-        String,
         default="analyst"
-    )
-
-    role = Column(
-        String,
-        default="auditor"
     )
 
 

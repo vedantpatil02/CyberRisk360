@@ -42,9 +42,8 @@ from app.services.validators import (
 )
 
 from app.services.vulnerability_summary import (
-    initialize_vulnerability_summary
+    get_vulnerability_summary as generate_summary
 )
-
 
 
 from app.models.control import (
@@ -54,6 +53,16 @@ from app.models.control import (
 from app.services.control_suggester import (
     suggest_control_names
 )
+
+from app.services.vulnerability_summary import (
+    get_top_critical_vulnerabilities
+)
+
+from app.models.control import Control
+from app.models.vulnerability_control_mapping import (
+    VulnerabilityControlMapping
+)
+
 
 router = APIRouter()
 
@@ -121,6 +130,25 @@ def get_vulnerabilities(
         Vulnerability
     ).all()
 
+@router.get(
+    "/vulnerabilities/top-critical"
+)
+def top_critical_vulnerabilities(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+
+    return (
+        get_top_critical_vulnerabilities(
+            db
+        )
+    )
 
 @router.get(
     "/vulnerabilities/{vulnerability_id}"
@@ -294,10 +322,8 @@ def close_vulnerability(
         "Vulnerability closed"
     }
 
-@router.get(
-    "/vulnerability-summary"
-)
-def get_vulnerability_summary(
+@router.get("/vulnerability-summary")
+def vulnerability_summary(
     db: Session = Depends(get_db),
     current_user=Depends(
         require_role(
@@ -307,53 +333,8 @@ def get_vulnerability_summary(
         )
     )
 ):
-    """
-    Return vulnerability dashboard statistics.
-    """
+    return generate_summary(db)
 
-    vulnerabilities = (
-        db.query(
-            Vulnerability
-        )
-        .all()
-    )
-
-    summary = (
-        initialize_vulnerability_summary()
-    )
-
-    for vulnerability in vulnerabilities:
-
-        # Count severities
-        if vulnerability.severity:
-
-            severity = (
-                vulnerability.severity.lower()
-            )
-
-            if severity in summary:
-
-                summary[severity] += 1
-
-        # Count open vulnerabilities
-        if (
-            vulnerability.status
-            ==
-            VULNERABILITY_STATUS_OPEN
-        ):
-
-            summary["open"] += 1
-
-        # Count closed vulnerabilities
-        elif (
-            vulnerability.status
-            ==
-            VULNERABILITY_STATUS_CLOSED
-        ):
-
-            summary["closed"] += 1
-
-    return summary
 
 
 @router.get(
@@ -450,3 +431,50 @@ def get_suggested_controls(
         "recommended_controls":
             recommended_controls
     }
+
+
+@router.get(
+    "/vulnerabilities/{vulnerability_id}/controls"
+)
+def get_vulnerability_controls(
+    vulnerability_id: int,
+    db: Session = Depends(get_db)
+):
+
+    controls = (
+        db.query(
+            Control
+        )
+        .join(
+            VulnerabilityControlMapping,
+            VulnerabilityControlMapping.control_id
+            == Control.id
+        )
+        .filter(
+            VulnerabilityControlMapping.vulnerability_id
+            == vulnerability_id
+        )
+        .all()
+    )
+
+    results = []
+
+    for control in controls:
+
+        results.append(
+            {
+                "control_id":
+                    control.control_id,
+
+                "name":
+                    control.name,
+
+                "framework":
+                    control.framework,
+
+                "status":
+                    control.status
+            }
+        )
+
+    return results

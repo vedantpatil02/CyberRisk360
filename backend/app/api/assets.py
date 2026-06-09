@@ -10,6 +10,9 @@ from app.schemas.asset import AssetCreate
 from app.dependencies.database import get_db
 from app.core.constants import *
 
+from app.models.vulnerability import Vulnerability
+
+
 router = APIRouter()
 
 from app.dependencies.rbac import (
@@ -62,3 +65,110 @@ def get_assets(
 ):
     return db.query(Asset).all()
 
+
+
+@router.get(
+    "/assets/{asset_id}/vulnerabilities"
+)
+def get_asset_vulnerabilities(
+    asset_id: int,
+    db: Session = Depends(get_db)
+):
+
+    vulnerabilities = (
+        db.query(
+            Vulnerability
+        )
+        .filter(
+            Vulnerability.asset_id
+            == asset_id
+        )
+        .order_by(
+            Vulnerability.cvss_score.desc()
+        )
+        .all()
+    )
+
+    results = []
+
+    for vulnerability in vulnerabilities:
+
+        results.append(
+            {
+                "id":
+                    vulnerability.id,
+
+                "plugin_id":
+                    vulnerability.plugin_id,
+
+                "title":
+                    vulnerability.title,
+
+                "severity":
+                    vulnerability.severity,
+
+                "cvss_score":
+                    vulnerability.cvss_score,
+
+                "status":
+                    vulnerability.status
+            }
+        )
+
+    return results
+
+
+@router.get(
+    "/assets/{asset_id}/summary"
+)
+def get_asset_summary(
+    asset_id: int,
+    db: Session = Depends(get_db)
+):
+
+    asset = (
+        db.query(Asset)
+        .filter(
+            Asset.id == asset_id
+        )
+        .first()
+    )
+
+    if not asset:
+
+        return {
+            "message": "Asset not found"
+        }
+
+    vulnerabilities = (
+        db.query(
+            Vulnerability
+        )
+        .filter(
+            Vulnerability.asset_id
+            == asset_id
+        )
+        .all()
+    )
+
+    summary = {
+        "asset_id": asset.id,
+        "asset_name": asset.name,
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "total": len(vulnerabilities)
+    }
+
+    for vulnerability in vulnerabilities:
+
+        severity = (
+            vulnerability.severity
+            .lower()
+        )
+
+        if severity in summary:
+            summary[severity] += 1
+
+    return summary
