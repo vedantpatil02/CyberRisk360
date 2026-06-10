@@ -32,26 +32,49 @@ def map_controls(
     control_codes = []
 
     # OpenSSH vulnerabilities
-    # relate to vulnerability
-    # management controls
     if "openssh" in title:
 
         control_codes.extend(
             [
-                "RA-5",
-                "SI-2"
+                "ID.RA-1",
+                "PR.AC-1",
+                "PR.DS-1"
             ]
         )
 
     # Weak cipher findings
-    # relate to secure
-    # configuration controls
     if "cipher" in title:
 
-        control_codes.append(
-            "CM-6"
+        control_codes.extend(
+            [
+                "PR.DS-1",
+                "PR.IP-1"
+            ]
         )
 
+    # Weak key exchange
+    if (
+        "key exchange" in title
+        or
+        "weak key" in title
+    ):
+
+        control_codes.extend(
+            [
+                "PR.AC-3",
+                "PR.DS-1"
+            ]
+        )
+
+    # SSH configuration issues
+    if "ssh" in title:
+
+        control_codes.extend(
+            [
+                "PR.IP-1",
+                "DE.CM-1"
+            ]
+        )
     # Create mappings
     for code in control_codes:
 
@@ -65,6 +88,23 @@ def map_controls(
         )
 
         if not control:
+            continue
+
+        existing = (
+            db.query(
+                VulnerabilityControlMapping
+            )
+            .filter(
+                VulnerabilityControlMapping.vulnerability_id
+                == vulnerability.id,
+
+                VulnerabilityControlMapping.control_id
+                == control.id
+            )
+            .first()
+        )
+
+        if existing:
             continue
 
         mapping = (

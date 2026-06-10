@@ -1,12 +1,52 @@
 [
     {
+        "control_id": "ID.AM-1",
+        "name": "Physical Devices and Systems Inventory",
+        "description": "Maintain an inventory of physical devices and systems."
+    },
+    {
+        "control_id": "ID.AM-2",
+        "name": "Software Inventory",
+        "description": "Maintain an inventory of software platforms and applications."
+    },
+    {
+        "control_id": "ID.RA-1",
+        "name": "Asset Vulnerability Identification",
+        "description": "Identify and document vulnerabilities in assets."
+    },
+    {
         "control_id": "PR.AC-1",
         "name": "Identity Management",
         "description": "Manage identities and credentials."
     },
     {
+        "control_id": "PR.AC-3",
+        "name": "Remote Access Management",
+        "description": "Manage and monitor remote access."
+    },
+    {
         "control_id": "PR.DS-1",
         "name": "Data Protection",
         "description": "Protect data at rest and in transit."
+    },
+    {
+        "control_id": "PR.IP-1",
+        "name": "Baseline Configuration",
+        "description": "Establish and maintain secure baseline configurations."
+    },
+    {
+        "control_id": "DE.CM-1",
+        "name": "Network Monitoring",
+        "description": "Monitor networks to detect cybersecurity events."
+    },
+    {
+        "control_id": "RS.RP-1",
+        "name": "Response Plan Execution",
+        "description": "Execute response processes during incidents."
+    },
+    {
+        "control_id": "RC.RP-1",
+        "name": "Recovery Planning",
+        "description": "Execute recovery processes after incidents."
     }
 ]

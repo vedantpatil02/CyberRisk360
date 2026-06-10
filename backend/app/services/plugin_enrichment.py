@@ -10,6 +10,34 @@ import requests
 import re
 from bs4 import BeautifulSoup
 
+
+PLUGIN_PAGE_CACHE = {}
+
+def get_plugin_page(plugin_id):
+
+    if plugin_id in PLUGIN_PAGE_CACHE:
+        return PLUGIN_PAGE_CACHE[plugin_id]
+
+    url = (
+        "https://www.tenable.com/plugins/nessus/"
+        f"{plugin_id}"
+    )
+
+    response = requests.get(
+        url,
+        timeout=10
+    )
+
+    if response.status_code != 200:
+        return None
+
+    PLUGIN_PAGE_CACHE[
+        plugin_id
+    ] = response.text
+
+    return response.text
+
+
 # Scrapping the CVE_ID mapped with plugin_id
 def get_cves_from_plugin(
     plugin_id: str
@@ -22,18 +50,16 @@ def get_cves_from_plugin(
 
     try:
 
-        response = requests.get(
-            url,
-            timeout=10
+        html = get_plugin_page(
+            plugin_id
         )
 
-        if response.status_code != 200:
-
+        if not html:
             return None
 
         cves = re.findall(
             r"CVE-\d{4}-\d+",
-            response.text
+            html
         )
 
         if not cves:
@@ -63,16 +89,15 @@ def get_description_from_plugin(
 
     try:
 
-        response = requests.get(
-            url,
-            timeout=10
+        html = get_plugin_page(
+            plugin_id
         )
 
-        if response.status_code != 200:
+        if not html:
             return ""
 
         soup = BeautifulSoup(
-            response.text,
+            html,
             "html.parser"
         )
 
@@ -109,16 +134,15 @@ def get_solution_from_plugin(
 
     try:
 
-        response = requests.get(
-            url,
-            timeout=10
+        html = get_plugin_page(
+            plugin_id
         )
 
-        if response.status_code != 200:
+        if not html:
             return ""
 
         soup = BeautifulSoup(
-            response.text,
+            html,
             "html.parser"
         )
 

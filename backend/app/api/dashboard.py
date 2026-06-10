@@ -6,6 +6,10 @@ from app.dependencies.database import get_db
 from app.models.asset import Asset
 from app.models.vulnerability import Vulnerability
 from sqlalchemy import func
+from app.services.grc_dashboard import get_grc_dashboard
+from app.dependencies.rbac import require_role
+from app.core.constants import ROLE_ADMIN, ROLE_ANALYST,ROLE_AUDITOR
+
 
 router = APIRouter()
 
@@ -97,3 +101,26 @@ def dashboard_overview(
         )
 
     return summary
+
+@router.get(
+    "/dashboard/grc/{framework_name}"
+)
+def grc_dashboard(
+    framework_name: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Executive GRC dashboard.
+    """
+
+    return get_grc_dashboard(
+        db,
+        framework_name
+    )

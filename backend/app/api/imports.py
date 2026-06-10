@@ -31,6 +31,8 @@ from app.services.vulnerability_importer import (
 
 router = APIRouter()
 
+import time
+
 
 @router.post(
     "/imports/nessus_report_upload"
@@ -58,9 +60,10 @@ def upload_report(
         UPLOAD_DIR,
         exist_ok=True
     )
-    
+
     upload_path = (
-        f"uploads/{uuid.uuid4()}_{file.filename}"
+        f"{UPLOAD_DIR}/"
+        f"{uuid.uuid4()}_{file.filename}"
     )
 
     with open(
@@ -72,15 +75,27 @@ def upload_report(
             file.file.read()
         )
 
+    # start = time.time()
+
     result = process_report(
         upload_path
+    )
+
+    print(
+        "PROCESS REPORT:",
+        round(
+            time.time() - start,
+            2
+        ),
+        "seconds"
     )
 
     if result["file_type"] == "pdf":
 
         try:
-            
-            # print("BEFORE IMPORT")
+
+            # start = time.time()
+
             import_result = (
                 import_findings(
                     db,
@@ -88,7 +103,14 @@ def upload_report(
                 )
             )
 
-            # print("AFTER IMPORT")
+            print(
+                "IMPORT FINDINGS:",
+                round(
+                    time.time() - start,
+                    2
+                ),
+                "seconds"
+            )
 
             result["import_result"] = (
                 import_result

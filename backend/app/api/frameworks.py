@@ -5,9 +5,12 @@ Purpose:
 Expose compliance framework data.
 """
 
-from fastapi import APIRouter
-from fastapi import Depends
-from fastapi import Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    Query,
+    HTTPException
+)
 
 from app.dependencies.rbac import (
     require_role
@@ -29,7 +32,13 @@ from app.services.framework_importer import (
     import_framework
 )
 
+from app.services.framework_gap_analysis import (
+    get_framework_gaps
+)
 
+from app.services.control_risk_analysis import (
+    get_control_risk_analysis
+)
 
 router = APIRouter()
 
@@ -101,10 +110,17 @@ def search_framework_controls(
     """
 
     FRAMEWORK_FILES = {
-        "owasp-asvs": "frameworks/owasp_asvs.json",
-        "nist-csf": "frameworks/nist_csf.json",
-        "iso27001": "frameworks/iso27001.json",
-        "cis": "frameworks/cis_controls.json"
+        FRAMEWORK_OWASP_ASVS:
+            "frameworks/owasp_asvs.json",
+
+        FRAMEWORK_NIST_CSF:
+            "frameworks/nist_csf.json",
+
+        FRAMEWORK_ISO27001:
+            "frameworks/iso27001.json",
+
+        FRAMEWORK_CIS:
+            "frameworks/cis_controls.json"
     }
 
 
@@ -140,3 +156,49 @@ def search_framework_controls(
             )
 
     return results
+
+@router.get(
+    "/frameworks/{framework_name}/gaps"
+)
+def framework_gap_analysis(
+    framework_name: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Return framework gap analysis.
+    """
+
+    return get_framework_gaps(
+        db,
+        framework_name
+    )
+
+@router.get(
+    "/frameworks/{framework_name}/risk-analysis"
+)
+def framework_risk_analysis(
+    framework_name: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Return control risk analysis.
+    """
+
+    return get_control_risk_analysis(
+        db,
+        framework_name
+    )
