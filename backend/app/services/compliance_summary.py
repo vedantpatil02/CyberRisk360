@@ -6,6 +6,7 @@ Generate compliance dashboard
 statistics.
 """
 
+
 from app.core.constants import (
     CONTROL_STATUS_IMPLEMENTED,
     CONTROL_STATUS_PARTIAL,

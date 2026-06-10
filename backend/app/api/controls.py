@@ -24,6 +24,11 @@ from app.services.compliance_summary import calculate_compliance_summary
 
 from app.schemas.control_update import ControlUpdate
 
+from app.models.vulnerability import Vulnerability
+from app.models.vulnerability_control_mapping import (
+    VulnerabilityControlMapping
+)
+
 router = APIRouter()
 
 @router.post("/controls")
@@ -191,4 +196,172 @@ def update_control_status(
     return {
         "message":
         "Control updated"
+    }
+
+@router.get(
+    "/controls/{control_id}/vulnerabilities"
+)
+def get_control_vulnerabilities(
+    control_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Return vulnerabilities mapped
+    to a compliance control.
+    """
+
+    control = (
+        db.query(Control)
+        .filter(
+            Control.id == control_id
+        )
+        .first()
+    )
+
+    if not control:
+
+        return {
+            "message":
+            "Control not found"
+        }
+
+    vulnerabilities = (
+        db.query(
+            Vulnerability
+        )
+        .join(
+            VulnerabilityControlMapping,
+            VulnerabilityControlMapping.vulnerability_id
+            == Vulnerability.id
+        )
+        .filter(
+            VulnerabilityControlMapping.control_id
+            == control_id
+        )
+        .all()
+    )
+
+    results = []
+
+    for vulnerability in vulnerabilities:
+
+        results.append(
+            {
+                "id":
+                    vulnerability.id,
+
+                "plugin_id":
+                    vulnerability.plugin_id,
+
+                "title":
+                    vulnerability.title,
+
+                "severity":
+                    vulnerability.severity,
+
+                "cvss_score":
+                    vulnerability.cvss_score,
+
+                "status":
+                    vulnerability.status
+            }
+        )
+
+    return {
+        "control_id":
+            control.control_id,
+
+        "control_name":
+            control.name,
+
+        "framework":
+            control.framework,
+
+        "affected_vulnerabilities":
+            len(vulnerabilities),
+
+        "vulnerabilities":
+            results
+    }
+
+@router.get(
+    "/frameworks/{framework_name}/summary"
+)
+def get_framework_summary(
+    framework_name: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Return compliance summary
+    for a framework.
+    """
+
+    controls = (
+        db.query(Control)
+        .filter(
+            Control.framework
+            == framework_name
+        )
+        .all()
+    )
+
+    total_controls = len(
+        controls
+    )
+
+    affected_controls = 0
+
+    affected_vulnerabilities = 0
+
+    for control in controls:
+
+        vulnerability_count = (
+            db.query(
+                VulnerabilityControlMapping
+            )
+            .filter(
+                VulnerabilityControlMapping.control_id
+                == control.id
+            )
+            .count()
+        )
+
+        if vulnerability_count > 0:
+
+            affected_controls += 1
+
+            affected_vulnerabilities += (
+                vulnerability_count
+            )
+
+    compliance_score = (
+        (
+            total_controls
+            - affected_controls
+        )
+        /
+        total_controls
+        * 100
+        if total_controls > 0
+        else 0
+    )
+
+    return {
+        "framework":
+            framework_name,
+
+        "total_controls":
+            total_controls,
+
+        "affected_controls":
+            affected_controls,
+
+        "affected_vulnerabilities":
+            affected_vulnerabilities,
+
+        "compliance_score":
+            round(
+                compliance_score,
+                2
+            )
     }
