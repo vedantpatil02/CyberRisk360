@@ -18,11 +18,6 @@ from app.services.pdf_importer import (
 
 
 
-# Future imports
-# from app.services.nessus_xml_importer import parse_nessus_xml
-# from app.services.pdf_importer import parse_pdf_report
-
-
 def process_report(
     file_path: str
 ):
@@ -60,20 +55,6 @@ def process_report(
             )
         )
 
-        print(
-            "CONTENT LENGTH:",
-            len(pdf_data["content"])
-        )
-
-        with open(
-            "uploads/live_content.txt",
-            "w",
-            encoding="utf-8"
-        ) as file:
-
-            file.write(
-                pdf_data["content"]
-            )
 
         # print(
         #     pdf_data["content"][:2000]

@@ -55,10 +55,10 @@ def import_framework_controls(
         not in
         FRAMEWORK_FILES
     ):
-        return {
-            "message":
-            "Framework not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Framework not found"
+        )
 
     controls = load_framework(
         FRAMEWORK_FILES[
@@ -100,26 +100,25 @@ def search_framework_controls(
     Search controls within a framework.
     """
 
-    framework_files = {
+    FRAMEWORK_FILES = {
         "owasp-asvs": "frameworks/owasp_asvs.json",
         "nist-csf": "frameworks/nist_csf.json",
         "iso27001": "frameworks/iso27001.json",
         "cis": "frameworks/cis_controls.json"
     }
 
-    print(f"Framework requested: {framework_name}")
 
-    if framework_name not in framework_files:
+    if framework_name not in FRAMEWORK_FILES:
 
         return {
             "message": "Framework not found",
             "available_frameworks": list(
-                framework_files.keys()
+                FRAMEWORK_FILES.keys()
             )
         }
 
     controls = load_framework(
-    framework_files[
+    FRAMEWORK_FILES[
         framework_name
     ]
 )

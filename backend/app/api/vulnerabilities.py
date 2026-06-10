@@ -31,7 +31,12 @@ from app.services.cvss import (
     calculate_severity
 )
 
-from app.core.constants import *
+from app.core.constants import (
+    ROLE_ADMIN,
+    ROLE_ANALYST,
+    ROLE_AUDITOR,
+    VULNERABILITY_STATUS_OPEN
+)
 
 from app.schemas.vulnerability_update import (
     VulnerabilityUpdate
@@ -43,11 +48,6 @@ from app.services.validators import (
 
 from app.services.vulnerability_summary import (
     get_vulnerability_summary as generate_summary
-)
-
-
-from app.models.control import (
-    Control
 )
 
 from app.services.control_suggester import (

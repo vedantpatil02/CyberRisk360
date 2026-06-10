@@ -6,10 +6,6 @@ from fastapi import File
 import os
 import uuid
 
-from app.importers.nessus_pdf_parser import (
-    extract_findings
-)
-
 from app.dependencies.rbac import (
     require_role
 )
@@ -56,11 +52,13 @@ def upload_report(
 
     # print("UPLOAD REQUEST RECEIVED")
 
+    UPLOAD_DIR = "uploads"
+
     os.makedirs(
-        "uploads",
+        UPLOAD_DIR,
         exist_ok=True
     )
-
+    
     upload_path = (
         f"uploads/{uuid.uuid4()}_{file.filename}"
     )
