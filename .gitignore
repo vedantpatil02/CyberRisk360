@@ -5,9 +5,11 @@ __pycache__/
 # Virtual Environment
 venv/
 backend/venv/
+frontend/venv/
 
 # Database
 *.db
+*.db.bak
 
 # Environment Variables
 .env

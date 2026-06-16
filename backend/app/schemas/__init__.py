@@ -12,4 +12,3 @@ from app.schemas.risk import RiskCreate
 from app.schemas.risk_update import RiskUpdate
 from app.schemas.vulnerability import VulnerabilityCreate
 from app.schemas.control import ControlCreate
-from app.schemas.risk_control_mapping import RiskControlMappingCreate

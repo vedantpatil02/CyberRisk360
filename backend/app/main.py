@@ -10,7 +10,6 @@ from app.api.assets import router as asset_router
 from app.api.risks import router as risk_router
 from app.api.vulnerabilities import router as vulnerability_router
 from app.api.controls import router as control_router
-from app.api.risk_control_mappings import router as mapping_router
 from app.api.frameworks import router as framework_router
 from app.api.imports import router as import_router
 from app.api.dashboard import (router as dashboard_router)
@@ -32,7 +31,6 @@ app.include_router(asset_router)
 app.include_router(risk_router)
 app.include_router(vulnerability_router)
 app.include_router(control_router)
-app.include_router(mapping_router)
 app.include_router(framework_router)
 app.include_router(import_router)
 app.include_router(dashboard_router)
