@@ -12,6 +12,9 @@ from app.core.constants import *
 
 from app.models.vulnerability import Vulnerability
 
+from app.services.asset_risk_analysis import (
+    get_asset_risk_summary
+)
 
 router = APIRouter()
 
@@ -172,3 +175,25 @@ def get_asset_summary(
             summary[severity] += 1
 
     return summary
+
+@router.get(
+    "/assets/risk-summary"
+)
+def asset_risk_summary(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Return risk scores
+    for all assets.
+    """
+
+    return get_asset_risk_summary(
+        db
+    )

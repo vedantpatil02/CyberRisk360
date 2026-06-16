@@ -81,14 +81,14 @@ def upload_report(
         upload_path
     )
 
-    print(
-        "PROCESS REPORT:",
-        round(
-            time.time() - start,
-            2
-        ),
-        "seconds"
-    )
+    # print(
+    #     "PROCESS REPORT:",
+    #     round(
+    #         time.time() - start,
+    #         2
+    #     ),
+    #     "seconds"
+    # )
 
     if result["file_type"] == "pdf":
 
@@ -103,14 +103,14 @@ def upload_report(
                 )
             )
 
-            print(
-                "IMPORT FINDINGS:",
-                round(
-                    time.time() - start,
-                    2
-                ),
-                "seconds"
-            )
+            # print(
+            #     "IMPORT FINDINGS:",
+            #     round(
+            #         time.time() - start,
+            #         2
+            #     ),
+            #     "seconds"
+            # )
 
             result["import_result"] = (
                 import_result

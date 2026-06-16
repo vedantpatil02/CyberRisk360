@@ -9,6 +9,9 @@ from sqlalchemy import func
 from app.services.grc_dashboard import get_grc_dashboard
 from app.dependencies.rbac import require_role
 from app.core.constants import ROLE_ADMIN, ROLE_ANALYST,ROLE_AUDITOR
+from app.services.executive_dashboard import (
+    get_executive_dashboard
+)
 
 
 router = APIRouter()
@@ -123,4 +126,25 @@ def grc_dashboard(
     return get_grc_dashboard(
         db,
         framework_name
+    )
+
+@router.get(
+    "/dashboard/executive"
+)
+def executive_dashboard(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Executive security dashboard.
+    """
+
+    return get_executive_dashboard(
+        db
     )

@@ -31,50 +31,63 @@ def map_controls(
 
     control_codes = []
 
-    # OpenSSH vulnerabilities
-    if "openssh" in title:
+    CONTROL_RULES = {
 
-        control_codes.extend(
-            [
-                "ID.RA-1",
-                "PR.AC-1",
-                "PR.DS-1"
-            ]
-        )
+        "ssh": [
+            "PR.AC-1",
+            "PR.AC-3",
+            "PR.DS-1"
+        ],
 
-    # Weak cipher findings
-    if "cipher" in title:
+        "cipher": [
+            "PR.DS-1",
+            "PR.IP-1"
+        ],
 
-        control_codes.extend(
-            [
-                "PR.DS-1",
-                "PR.IP-1"
-            ]
-        )
+        "tls": [
+            "PR.DS-1"
+        ],
 
-    # Weak key exchange
-    if (
-        "key exchange" in title
-        or
-        "weak key" in title
+        "ssl": [
+            "PR.DS-1"
+        ],
+
+        "password": [
+            "PR.AC-1"
+        ],
+
+        "authentication": [
+            "PR.AC-1"
+        ],
+
+        "account": [
+            "PR.AC-1"
+        ],
+
+        "remote": [
+            "PR.AC-3"
+        ],
+
+        "configuration": [
+            "PR.IP-1"
+        ],
+
+        "vulnerability": [
+            "ID.RA-1"
+        ]
+    }
+
+    
+    for keyword, controls in (
+    CONTROL_RULES.items()
     ):
 
-        control_codes.extend(
-            [
-                "PR.AC-3",
-                "PR.DS-1"
-            ]
-        )
+        if keyword in title:
 
-    # SSH configuration issues
-    if "ssh" in title:
+            control_codes.extend(
+                controls
+            )
 
-        control_codes.extend(
-            [
-                "PR.IP-1",
-                "DE.CM-1"
-            ]
-        )
     # Create mappings
     for code in control_codes:
 
