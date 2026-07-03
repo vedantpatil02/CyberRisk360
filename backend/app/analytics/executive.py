@@ -11,11 +11,11 @@ from app.models.vulnerability import (
     Vulnerability
 )
 
-from app.services.asset_risk_analysis import (
+from app.analytics.asset_risk import (
     get_asset_risk_summary
 )
 
-from app.services.control_risk_analysis import (
+from app.analytics.control_risk_analysis import (
     get_control_risk_analysis
 )
 

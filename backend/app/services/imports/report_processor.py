@@ -10,7 +10,7 @@ from app.importers.nessus_pdf_parser import (
     extract_findings
 )
 
-from app.services.pdf_importer import (
+from app.services.imports.pdf_importer import (
     parse_pdf_report
 )
 

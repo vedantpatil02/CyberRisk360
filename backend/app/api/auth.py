@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 
 
-from app.services.security import verify_password
-from app.services.auth import create_access_token
+from app.services.security.security import verify_password
+from app.services.auth.auth import create_access_token
 from app.dependencies.database import get_db
 from app.dependencies.security import get_current_user
 

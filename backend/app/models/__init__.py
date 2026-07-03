@@ -3,3 +3,5 @@ from app.models.asset import Asset
 from app.models.risk import Risk
 from app.models.vulnerability import Vulnerability
 from app.models.control import Control
+from app.models.framework import Framework
+from app.models.category import Category

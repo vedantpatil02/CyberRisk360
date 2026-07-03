@@ -7,15 +7,15 @@ aggregating compliance,
 gaps, and risk analysis.
 """
 
-from app.services.compliance_summary import (
+from app.analytics.compliance import (
     calculate_compliance_summary
 )
 
-from app.services.framework_gap_analysis import (
+from app.analytics.gap_analysis import (
     get_framework_gaps
 )
 
-from app.services.control_risk_analysis import (
+from app.analytics.control_risk_analysis import (
     get_control_risk_analysis
 )
 

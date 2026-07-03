@@ -15,7 +15,7 @@ from app.core.constants import (
     ROLE_ANALYST
 )
 
-from app.services.report_processor import (
+from app.services.imports.report_processor import (
     process_report
 )
 
@@ -25,7 +25,7 @@ from app.dependencies.database import (
     get_db
 )
 
-from app.services.vulnerability_importer import (
+from app.services.vulnerabilities.vulnerability_importer import (
     import_findings
 )
 

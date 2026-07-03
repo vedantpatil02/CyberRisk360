@@ -27,7 +27,7 @@ from app.dependencies.rbac import (
     require_role
 )
 
-from app.services.cvss import (
+from app.services.security.cvss import (
     calculate_severity
 )
 
@@ -42,19 +42,19 @@ from app.schemas.vulnerability_update import (
     VulnerabilityUpdate
 )
 
-from app.services.validators import (
+from app.services.security.validators import (
     validate_cvss_score
 )
 
-from app.services.vulnerability_summary import (
+from app.services.vulnerabilities.vulnerability_summary import (
     get_vulnerability_summary as generate_summary
 )
 
-from app.services.control_suggester import (
+from app.services.controls.control_suggester import (
     suggest_control_names
 )
 
-from app.services.vulnerability_summary import (
+from app.services.vulnerabilities.vulnerability_summary import (
     get_top_critical_vulnerabilities
 )
 

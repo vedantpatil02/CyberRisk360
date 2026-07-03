@@ -5,7 +5,7 @@ Purpose:
 Provide shared FastAPI dependencies.
 """
 
-from app.database import SessionLocal
+from app.db.database import SessionLocal
 
 
 def get_db():

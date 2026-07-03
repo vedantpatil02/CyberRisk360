@@ -2,7 +2,7 @@ from fastapi import Depends
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.db.database import SessionLocal
 
 from app.models.asset import Asset
 
@@ -12,7 +12,7 @@ from app.core.constants import *
 
 from app.models.vulnerability import Vulnerability
 
-from app.services.asset_risk_analysis import (
+from app.analytics.asset_risk import (
     get_asset_risk_summary
 )
 

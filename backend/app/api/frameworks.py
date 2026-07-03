@@ -18,7 +18,7 @@ from app.dependencies.rbac import (
 
 from app.core.constants import *
 
-from app.services.framework_loader import (
+from app.services.frameworks.framework_loader import (
     load_framework
 )
 
@@ -28,15 +28,15 @@ from app.dependencies.database import (
     get_db
 )
 
-from app.services.framework_importer import (
+from app.services.frameworks.framework_importer import (
     import_framework
 )
 
-from app.services.framework_gap_analysis import (
+from app.analytics.gap_analysis import (
     get_framework_gaps
 )
 
-from app.services.control_risk_analysis import (
+from app.analytics.control_risk_analysis import (
     get_control_risk_analysis
 )
 

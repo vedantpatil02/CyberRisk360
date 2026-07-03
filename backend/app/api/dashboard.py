@@ -6,10 +6,10 @@ from app.dependencies.database import get_db
 from app.models.asset import Asset
 from app.models.vulnerability import Vulnerability
 from sqlalchemy import func
-from app.services.grc_dashboard import get_grc_dashboard
+from app.analytics.grc import get_grc_dashboard
 from app.dependencies.rbac import require_role
 from app.core.constants import ROLE_ADMIN, ROLE_ANALYST,ROLE_AUDITOR
-from app.services.executive_dashboard import (
+from app.analytics.executive import (
     get_executive_dashboard
 )
 

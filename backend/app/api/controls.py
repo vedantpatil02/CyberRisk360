@@ -20,7 +20,7 @@ from app.dependencies.rbac import require_role
 
 from app.core.constants import ROLE_ADMIN, ROLE_ANALYST, ROLE_AUDITOR, CONTROL_STATUS_MISSING
 
-from app.services.compliance_summary import calculate_compliance_summary
+from app.analytics.compliance import calculate_compliance_summary
 
 from app.schemas.control_update import ControlUpdate
 

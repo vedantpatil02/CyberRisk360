@@ -2,10 +2,10 @@ from fastapi import APIRouter
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.db.database import SessionLocal
 from app.models.user import User
 from app.schemas.user import UserCreate
-from app.services.security import hash_password
+from app.services.security.security import hash_password
 from app.dependencies.database import get_db
 
 router = APIRouter()

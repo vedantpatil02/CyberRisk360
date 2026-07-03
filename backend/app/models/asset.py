@@ -2,7 +2,7 @@ from sqlalchemy import Column
 from sqlalchemy import Integer
 from sqlalchemy import String
 
-from app.database import Base
+from app.db.database import Base
 
 
 class Asset(Base):

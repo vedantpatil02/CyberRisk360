@@ -10,9 +10,9 @@ from app.dependencies.database import get_db
 from app.dependencies.rbac import require_role
 from app.core.constants import *
 
-from app.services.risk import calculate_risk_score, calculate_risk_level
+from app.services.risks.risk import calculate_risk_score, calculate_risk_level
 from app.schemas.risk_update import RiskUpdate
-from app.services.risk_summary import initialize_summary
+from app.analytics.risk_summary import initialize_summary
 
 
 router = APIRouter()

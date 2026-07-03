@@ -2,65 +2,74 @@
 CyberRisk360
 
 Purpose:
-Stores security controls from
-various compliance frameworks.
+Stores security controls
+for compliance frameworks.
 """
 
 from sqlalchemy import Column
+from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
 from sqlalchemy import String
 
-from app.database import Base
+from sqlalchemy.orm import relationship
+
+from app.db.database import Base
 
 
 class Control(Base):
-    """
-    Security control register.
-
-    Examples:
-
-    ISO27001 A.8.2
-    NIST PR.AC-1
-    OWASP ASVS V5
-    CIS Control 1
-    """
 
     __tablename__ = "controls"
 
-    # Unique database identifier
     id = Column(
         Integer,
         primary_key=True,
         index=True
     )
 
-    # Framework control identifier
+    category_id = Column(
+        Integer,
+        ForeignKey("categories.id"),
+        nullable=False
+    )
+
     control_id = Column(
         String,
         nullable=False,
         unique=True
     )
 
-    # Control name
-    name = Column(
+    title = Column(
         String,
         nullable=False
     )
 
-    # Control description
     description = Column(
         String,
         nullable=False
     )
 
-    # Compliance framework
-    framework = Column(
+    implementation_guidance = Column(
         String,
-        nullable=False
+        nullable=True
     )
 
-    # Implementation status
+    priority = Column(
+        String,
+        default="Medium"
+    )
+
     status = Column(
         String,
         default="Missing"
+    )
+
+    category = relationship(
+        "Category",
+        back_populates="controls"
+    )
+
+    vulnerability_mappings = relationship(
+        "VulnerabilityControlMapping",
+        back_populates="control",
+        cascade="all, delete-orphan"
     )
