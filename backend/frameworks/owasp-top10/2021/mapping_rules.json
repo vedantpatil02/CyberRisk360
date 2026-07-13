@@ -1,0 +1,26 @@
+{
+    "cve": {},
+    "cwe": {
+        "CWE-79": ["A03"],
+        "CWE-89": ["A03"],
+        "CWE-798": ["A07"],
+        "CWE-287": ["A07"],
+        "CWE-502": ["A08"],
+        "CWE-918": ["A10"],
+        "CWE-200": ["A01"],
+        "CWE-611": ["A05"]
+    },
+    "plugin_id": {},
+    "keyword": {
+        "sql injection": ["A03"],
+        "cross-site scripting": ["A03"],
+        "xss": ["A03"],
+        "csrf": ["A01"],
+        "access control": ["A01"],
+        "encryption": ["A02"],
+        "outdated": ["A06"],
+        "deserialization": ["A08"],
+        "logging": ["A09"],
+        "ssrf": ["A10"]
+    }
+}

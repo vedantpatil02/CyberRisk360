@@ -44,30 +44,28 @@ CONTROL_STATUS_IMPLEMENTED = "Implemented"
 CONTROL_STATUS_PARTIAL = "Partially Implemented"
 CONTROL_STATUS_MISSING = "Missing"
 
-FRAMEWORK_ISO27001 = "iso27001"
-FRAMEWORK_NIST_CSF = "nist-csf"
-FRAMEWORK_OWASP_ASVS = "owasp-asvs"
-FRAMEWORK_CIS = "cis"
+# Vulnerability-Control Mapping Engine
+MATCH_TYPE_CVE = "cve"
+MATCH_TYPE_CWE = "cwe"
+MATCH_TYPE_PLUGIN_ID = "plugin_id"
+MATCH_TYPE_KEYWORD = "keyword"
+
+# Confidence by match specificity: exact identifier matches (CVE,
+# Plugin ID) score highest, CWE (a weakness class, not an exact
+# instance) next, free-text keyword matches lowest.
+MAPPING_CONFIDENCE_BY_MATCH_TYPE = {
+    MATCH_TYPE_CVE: 0.95,
+    MATCH_TYPE_PLUGIN_ID: 0.9,
+    MATCH_TYPE_CWE: 0.85,
+    MATCH_TYPE_KEYWORD: 0.5,
+}
+
+MAPPING_STATUS_PENDING = "pending"
+MAPPING_STATUS_APPROVED = "approved"
+MAPPING_STATUS_REJECTED = "rejected"
 
 # backend/app/core/constants.py -> backend/
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 FRAMEWORKS_DIR = BACKEND_DIR / "frameworks"
-
-FRAMEWORK_VERSION_DIRS = {
-    "owasp-asvs": FRAMEWORKS_DIR / "owasp-asvs" / "v4.0.3",
-    "nist-csf": FRAMEWORKS_DIR / "nist-csf" / "v2.0",
-    "iso27001": FRAMEWORKS_DIR / "iso27001" / "2022",
-    "cis": FRAMEWORKS_DIR / "cis-controls" / "v8",
-}
-
-FRAMEWORK_FILES = {
-    key: str(path / "framework.json")
-    for key, path in FRAMEWORK_VERSION_DIRS.items()
-}
-
-FRAMEWORK_METADATA_FILES = {
-    key: str(path / "metadata.json")
-    for key, path in FRAMEWORK_VERSION_DIRS.items()
-}
 
 UPLOAD_DIR = "uploads"

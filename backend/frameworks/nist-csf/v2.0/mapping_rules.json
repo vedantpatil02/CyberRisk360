@@ -1,0 +1,24 @@
+{
+    "cve": {
+        "CVE-2021-44228": ["PR.IP-1", "ID.RA-1"]
+    },
+    "cwe": {
+        "CWE-287": ["PR.AC-1"],
+        "CWE-798": ["PR.AC-1"]
+    },
+    "plugin_id": {
+        "10267": ["PR.AC-3"]
+    },
+    "keyword": {
+        "ssh": ["PR.AC-1", "PR.AC-3", "PR.DS-1"],
+        "cipher": ["PR.DS-1", "PR.IP-1"],
+        "tls": ["PR.DS-1"],
+        "ssl": ["PR.DS-1"],
+        "password": ["PR.AC-1"],
+        "authentication": ["PR.AC-1"],
+        "account": ["PR.AC-1"],
+        "remote": ["PR.AC-3"],
+        "configuration": ["PR.IP-1"],
+        "vulnerability": ["ID.RA-1"]
+    }
+}
