@@ -93,6 +93,25 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       `vulnerability_coverage_score` per explicit direction (neither
       definition picked as canonical - both are legitimate, they just
       needed to stop sharing a name). No behavior/value change
+- [x] CSV and native `.nessus` XML importers (`importers/
+      nessus_csv_parser.py`, `importers/nessus_xml_parser.py`), replacing
+      the `report_processor.py` stubs. `.nessus` XML parsed with
+      `defusedxml` for XXE protection. Added a file-extension allowlist
+      and try/except hardening around `process_report()` in
+      `api/imports.py`, fixing a latent `KeyError`→500 bug the stubs had
+      (missing `"file_type"` key). 76 → 91 tests
+- [x] `vulnerability_importer.import_findings` split into two phases
+      (`_enrich_findings` then `_write_findings`) so slow/failed
+      network-bound enrichment lookups no longer sit inside one
+      long-held write transaction with the actual DB writes - the
+      "deliberately deferred twice" item below. Along the way, found
+      and fixed a real regression risk: splitting the phases would
+      have silently broken intra-batch duplicate-`plugin_id` dedup
+      (previously working only by accident, via flush-visibility, and
+      untested) - fixed with an explicit in-memory dedup set.
+      `get_plugin_enrichment` now returns `(dict, cache_written: bool)`
+      so phase 1 only commits when it actually wrote the cache, not on
+      every cache hit. 91 → 96 tests
 
 ## Next up
 
@@ -116,23 +135,9 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       here, but never actually built/run. Pay particular attention to
       the `uploads` volume's ownership (non-root `appuser` needs write
       access after the volume mounts over `/app/uploads`)
-- [ ] `vulnerability_importer.py`'s `import_findings` still holds one
-      DB session/transaction open across a whole import batch's worth
-      of sequential enrichment lookups, only committing at the end (or
-      rolling everything back on any failure). The persistent cache
-      (this pass) means most of those lookups skip the network
-      entirely after the first import, but a large *first-time* import
-      still serializes real network calls inside one long-held
-      transaction. Fixing this properly means restructuring
-      `import_findings` into two phases (enrich-then-write) -
-      deliberately deferred twice now (database-foundation pass and
-      this one) as a bigger scalability refactor, not a "fragile
-      dependency" reliability fix
 
 ## Deferred (explicitly out of scope per Phase 1 Stabilization)
 
-- [ ] CSV / native `.nessus` XML importers (`services/imports/report_processor.py`
-      stubs)
 - [ ] `services/enrichment/cve_enrichment.py` (currently a no-op)
 - [ ] `backend/app/reports/*.py` report generation (all empty stubs)
 - [ ] Additional frameworks: PCI DSS, SOC 2, HIPAA, NIST SP 800-53

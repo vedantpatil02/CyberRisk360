@@ -1,3 +1,107 @@
+## v0.6-alpha16
+
+### Changed
+- `vulnerability_importer.import_findings` split into two phases -
+  `_enrich_findings` then `_write_findings` - instead of one loop that
+  held a single write transaction open across the whole batch while
+  also making real, slow network calls (`get_plugin_enrichment` can
+  hit tenable.com, up to 3 retries with backoff). Now enrichment runs
+  first, entirely separate from the write transaction, and commits
+  immediately whenever the enrichment cache is actually written (a
+  real fetch happened) - not on every finding, so a cache-hit-heavy
+  repeat import doesn't turn into thousands of needless commits.
+  `_write_findings` then does the local DB writes (asset + vulnerability
+  creation, control mapping) in one fast, network-free transaction,
+  single commit at the end - same atomicity as before for that part.
+  A "deliberately deferred twice" item from TODO.md's backlog, now
+  more relevant since the CSV/`.nessus` importers (previous pass) feed
+  the same function
+- `get_plugin_enrichment` (`services/enrichment/plugin_enrichment.py`)
+  now returns `(dict, cache_written: bool)` instead of just `dict`, so
+  the caller knows whether this call actually wrote the cache (a real
+  fetch happened) versus a cache hit - the signal `_enrich_findings`
+  uses to decide whether a commit is needed
+
+### Fixed
+- Found and fixed a real regression risk while designing the split:
+  today, checking `get_by_plugin_id` inside the same session correctly
+  catches the SAME `plugin_id` appearing twice within one import batch
+  (e.g. a Nessus report listing one plugin on multiple hosts), because
+  SQLAlchemy sessions see their own flushed-but-uncommitted inserts -
+  but this was untested (no test exercised it), and splitting enrichment
+  out into its own phase-before-any-flush would have silently broken it
+  (both occurrences would have sailed through and created duplicate
+  vulnerability rows). Fixed by deduping against an in-memory set in
+  `_enrich_findings` in addition to the DB check, preserving the exact
+  "first occurrence in the batch wins" semantics without depending on
+  flush timing. Covered by
+  `test_intra_batch_duplicate_plugin_id_creates_only_one`
+- As a side effect of committing the enrichment cache immediately
+  instead of only at the very end of the whole batch, a successfully
+  fetched cache entry now survives even if a later finding in the same
+  batch fails and the write phase rolls back - previously the cache
+  write shared the same not-yet-committed transaction as the failed
+  write and was lost too. Covered by
+  `test_enrichment_cache_persists_when_phase_two_fails`
+
+### Tests
+- New `test_vulnerability_importer.py` - direct unit tests for
+  `import_findings` below the HTTP/file-parsing level: intra-batch
+  dedup, cross-batch (DB) dedup, cache durability on phase-2 failure,
+  and commit-granularity on a cache hit (`_enrich_findings` alone
+  should commit zero times on an all-cache-hit batch - the whole point
+  of the conditional-commit design). `test_imports.py`'s 5 mocked
+  `get_plugin_enrichment` call sites updated to the new
+  `(dict, cache_written)` return shape. 91 → 96 tests. Verified green
+  on both SQLite and a real PostgreSQL instance
+
+## v0.6-alpha15
+
+### Added
+- CSV and native `.nessus` XML report importers -
+  `importers/nessus_csv_parser.py` and `importers/nessus_xml_parser.py`,
+  wired into `services/imports/report_processor.py` alongside the
+  existing PDF path. Both produce the same finding dict shape PDF
+  import does, so `vulnerability_importer.import_findings` needed no
+  changes at all. CSV parses Nessus's standard export columns
+  (`Plugin ID`/`CVE`/`CVSS`/`Risk`/`Host`/.../`Name`); `.nessus` XML
+  parses `<ReportHost><ReportItem severity="0-4">` with the host
+  attribution taken directly from the enclosing `<ReportHost name="...">`
+  (no host-tracking-state hack needed, unlike the PDF parser). Both skip
+  informational-level findings (`Risk="None"` / `severity="0"`), matching
+  the PDF parser's existing behavior
+- `.nessus` XML is parsed with `defusedxml.ElementTree` (new dependency),
+  not stdlib `ElementTree` - blocks XXE/entity-expansion attacks on
+  untrusted uploads. Verified with a real attack payload
+  (`<!ENTITY xxe SYSTEM "file:///etc/passwd">`) in
+  `test_xxe_attack_is_blocked`, which confirms `defusedxml` actually
+  raises rather than silently parsing
+- File-extension allowlist (`pdf`/`csv`/`nessus`) in `api/imports.py`,
+  rejecting anything else with a clean `400` before the file is written
+  to disk
+
+### Fixed
+- `api/imports.py` dispatched to `import_findings` with
+  `if result["file_type"] == "pdf":` - the CSV/`.nessus` stubs never
+  returned a `"file_type"` key at all, so uploading either format raised
+  an unguarded `KeyError` → raw 500. Generalized to
+  `if result.get("findings"):`, which is format-agnostic and needed no
+  changes for this or any future format
+- `process_report()` was never wrapped in try/except (only
+  `import_findings` was, from the earlier security-hardening pass) - a
+  malformed CSV or invalid XML upload produced an unguarded 500 with a
+  leaked traceback. Now converts any parse failure into
+  `HTTPException(400, "Failed to parse report")`, traceback logged
+  server-side only, matching the existing `import_findings` failure
+  pattern
+
+### Tests
+- `test_nessus_csv_parser.py` (4 tests), `test_nessus_xml_parser.py`
+  (6 tests, including the XXE-blocking test), plus 5 new
+  `test_imports.py` cases covering full-pipeline CSV/`.nessus` upload,
+  rejected extensions, and malformed-upload 400s. 76 → 91 tests.
+  Verified green on both SQLite and a real PostgreSQL instance
+
 ## v0.6-alpha14
 
 ### Fixed

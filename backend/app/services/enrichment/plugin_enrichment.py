@@ -115,8 +115,14 @@ def _parse_solution(html: str):
 
 def get_plugin_enrichment(db, plugin_id: str):
     """
-    Return {"cve_ids", "description", "solution"} for a plugin_id,
-    checking the persistent cache before ever making a network call.
+    Return ({"cve_ids", "description", "solution"}, cache_written) for
+    a plugin_id, checking the persistent cache before ever making a
+    network call. cache_written is True only when this call actually
+    wrote the cache (a real fetch attempt happened, success or
+    failure) - False on a cache hit. vulnerability_importer.py uses
+    this to decide whether a commit is needed: it enriches findings
+    ahead of the write transaction and only wants to commit when
+    there's something new to make durable, not on every cache hit.
 
     Takes the caller's db session (same convention as every other
     repository/service in this codebase) and only flushes, never
@@ -131,10 +137,8 @@ def get_plugin_enrichment(db, plugin_id: str):
     multi-finding import, since it's the same thread sequentially
     using two connections, not a rare concurrent-request race that a
     busy_timeout could wait out. Sharing the caller's session avoids
-    that entirely, at the cost of the cache write rolling back if the
-    whole batch does - an acceptable, minor tradeoff (a lost cache
-    entry just means one more network fetch next time) next to a
-    near-guaranteed crash.
+    that entirely - the caller is responsible for committing when it
+    wants the write durable (see cache_written above).
     """
 
     entry = get_cache_entry(db, plugin_id)
@@ -145,7 +149,7 @@ def get_plugin_enrichment(db, plugin_id: str):
             "cve_ids": entry.cve_ids,
             "description": entry.description,
             "solution": entry.solution
-        }
+        }, False
 
     if entry and entry.status == "failed":
 
@@ -166,7 +170,7 @@ def get_plugin_enrichment(db, plugin_id: str):
                 "cve_ids": None,
                 "description": "",
                 "solution": ""
-            }
+            }, False
 
     html = _fetch_plugin_page(plugin_id)
 
@@ -178,7 +182,7 @@ def get_plugin_enrichment(db, plugin_id: str):
             "cve_ids": None,
             "description": "",
             "solution": ""
-        }
+        }, True
 
     result = {
         "cve_ids": _parse_cve_ids(html),
@@ -194,4 +198,4 @@ def get_plugin_enrichment(db, plugin_id: str):
         result["solution"]
     )
 
-    return result
+    return result, True

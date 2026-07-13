@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 import os
 import uuid
+import traceback
 
 from app.dependencies.rbac import (
     require_role
@@ -33,7 +34,7 @@ from app.services.vulnerabilities.vulnerability_importer import (
 
 router = APIRouter()
 
-import time
+ALLOWED_REPORT_EXTENSIONS = {"pdf", "csv", "nessus"}
 
 
 @router.post(
@@ -56,6 +57,22 @@ def upload_report(
 
     # print("UPLOAD REQUEST RECEIVED")
 
+    file_extension = (
+        (file.filename or "")
+        .split(".")[-1]
+        .lower()
+    )
+
+    if file_extension not in ALLOWED_REPORT_EXTENSIONS:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported file type - allowed: "
+                + ", ".join(sorted(ALLOWED_REPORT_EXTENSIONS))
+            )
+        )
+
     os.makedirs(
         UPLOAD_DIR,
         exist_ok=True
@@ -75,26 +92,28 @@ def upload_report(
             file.file.read()
         )
 
-    # start = time.time()
+    try:
 
-    result = process_report(
-        upload_path
-    )
+        result = process_report(
+            upload_path
+        )
 
-    # print(
-    #     "PROCESS REPORT:",
-    #     round(
-    #         time.time() - start,
-    #         2
-    #     ),
-    #     "seconds"
-    # )
+    except Exception:
 
-    if result["file_type"] == "pdf":
+        # Full traceback stays server-side; the client only gets a
+        # generic message so internal details (paths, parser
+        # internals, etc.) aren't leaked. Covers malformed CSV/XML
+        # and any other unexpected parse failure.
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to parse report"
+        )
+
+    if result.get("findings"):
 
         try:
-
-            # start = time.time()
 
             import_result = (
                 import_findings(
@@ -103,22 +122,11 @@ def upload_report(
                 )
             )
 
-            # print(
-            #     "IMPORT FINDINGS:",
-            #     round(
-            #         time.time() - start,
-            #         2
-            #     ),
-            #     "seconds"
-            # )
-
             result["import_result"] = (
                 import_result
             )
 
         except Exception:
-
-            import traceback
 
             # Full traceback stays server-side; the client only gets
             # a generic message so internal details (paths, query

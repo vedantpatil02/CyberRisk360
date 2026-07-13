@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<NessusClientData_v2>
+  <Report name="VA_Scan" xmlns:cm="http://www.nessus.org/cm">
+    <ReportHost name="192.168.0.169">
+      <ReportItem port="22" svc_name="ssh" protocol="tcp" severity="4" pluginID="90022" pluginName="OpenSSH &lt; 7.2 Untrusted X11 Forwarding Fallback Security Bypass" pluginFamily="Misc.">
+        <description>The SSH server running on the remote host is affected by a security bypass vulnerability.</description>
+        <solution>Upgrade to OpenSSH version 7.2 or later.</solution>
+        <cvss_base_score>9.8</cvss_base_score>
+        <cvss3_base_score>9.8</cvss3_base_score>
+      </ReportItem>
+      <ReportItem port="22" svc_name="ssh" protocol="tcp" severity="3" pluginID="106608" pluginName="OpenSSH 5.4 &lt; 7.1p2 Multiple Vulnerabilities" pluginFamily="Misc.">
+        <description>The SSH server running on the remote host is affected by multiple vulnerabilities.</description>
+        <solution>Upgrade to OpenSSH 7.1p2 or later.</solution>
+        <cvss_base_score>8.1</cvss_base_score>
+      </ReportItem>
+      <ReportItem port="22" svc_name="ssh" protocol="tcp" severity="2" pluginID="90023" pluginName="OpenSSH &lt; 7.2p2 X11Forwarding xauth Command Injection" pluginFamily="Misc.">
+        <description>The SSH server running on the remote host may allow command injection.</description>
+        <solution>Upgrade to OpenSSH 7.2p2 or later.</solution>
+        <cvss_base_score>6.4</cvss_base_score>
+      </ReportItem>
+      <ReportItem port="0" svc_name="general" protocol="tcp" severity="0" pluginID="19506" pluginName="Nessus Scan Information" pluginFamily="Settings">
+        <description>This plugin displays information about the Nessus scan.</description>
+        <solution>n/a</solution>
+      </ReportItem>
+    </ReportHost>
+  </Report>
+</NessusClientData_v2>
