@@ -152,3 +152,61 @@ def test_create_vulnerability_with_valid_refs_succeeds(client):
     assert response.status_code == 200
     assert response.json()["message"] == "Vulnerability created"
     assert len(client.get("/vulnerabilities").json()) == 1
+
+
+def test_create_vulnerability_triggers_mapping_engine(client, db_session):
+    """
+    Manually-created vulnerabilities now get the same automatic
+    control mapping as PDF-imported ones (keyword-only, since this
+    schema has no cve_id/plugin_id to match on).
+    """
+
+    from app.tests.test_mapping_engine import _import_nist_csf
+    _import_nist_csf(db_session)
+
+    asset_id = _create_asset(client)
+    risk_id = _create_risk(client, asset_id)
+
+    response = client.post("/vulnerabilities", json={
+        "title": "Weak SSH configuration", "description": "d",
+        "asset_id": asset_id, "risk_id": risk_id, "cvss_score": 5.0,
+        "owner": "IT"
+    })
+
+    assert response.status_code == 200
+
+    vulnerability_id = client.get("/vulnerabilities").json()[0]["id"]
+    mappings = client.get(f"/vulnerabilities/{vulnerability_id}/mappings").json()
+
+    assert len(mappings) > 0
+    assert all(m["match_type"] == "keyword" for m in mappings)
+    assert all(m["status"] == "pending" for m in mappings)
+
+
+# --- DB-level enforcement (bypassing the API layer entirely) --------------
+
+
+def test_db_level_fk_enforcement_rejects_orphaned_control(db_session):
+    """
+    The checks above prove the API layer rejects bad FK references
+    before they're ever persisted - this proves the database itself
+    would reject them too, even if some future code path bypassed the
+    API layer's checks (e.g. a script, a different service). Confirms
+    conftest.py's SQLite test engine has the same PRAGMA
+    foreign_keys=ON enforcement as the real app engine
+    (app/db/database.py).
+    """
+
+    from sqlalchemy.exc import IntegrityError
+    from app.models.control import Control
+
+    db_session.add(Control(
+        category_id=999999, control_id="ORPHAN-1",
+        title="t", description="d", status="Missing"
+    ))
+
+    try:
+        db_session.commit()
+        assert False, "expected IntegrityError, insert succeeded instead"
+    except IntegrityError:
+        db_session.rollback()

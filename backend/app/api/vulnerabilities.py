@@ -72,6 +72,9 @@ from app.repositories.assets.asset_repository import (
 from app.repositories.risks.risk_repository import (
     get_risk
 )
+from app.services.mapping.mapping_engine import (
+    map_vulnerability_to_controls
+)
 
 
 router = APIRouter()
@@ -119,7 +122,7 @@ def create_vulnerability(
         vulnerability.cvss_score
     )
 
-    db_create_vulnerability(
+    created_vulnerability = db_create_vulnerability(
         db,
         title=vulnerability.title,
         description=vulnerability.description,
@@ -129,6 +132,15 @@ def create_vulnerability(
         severity=severity,
         owner=vulnerability.owner,
         status=VULNERABILITY_STATUS_OPEN
+    )
+
+    # Automatically map to controls (pending review - see
+    # services/mapping/mapping_service.py), same as PDF-imported
+    # vulnerabilities. Manually-created ones have no cve_id/plugin_id
+    # (not part of this schema), so only keyword matches apply here.
+    map_vulnerability_to_controls(
+        db,
+        created_vulnerability
     )
 
     db.commit()
