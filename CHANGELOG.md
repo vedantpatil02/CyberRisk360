@@ -1,3 +1,233 @@
+## v0.6-alpha11
+
+Test coverage & CI/CD: the third "industry level" axis. Fills in the four
+previously-empty test files and adds the first CI pipeline this repo has
+ever had, automating the manual verification process (including a rootless
+local PostgreSQL) used by hand throughout this whole session.
+
+### Added
+- `app/tests/conftest.py`: `as_role` fixture - the first way to test RBAC
+  *denial* paths. The existing `get_current_user` override always returned
+  admin, so no test anywhere in the suite could exercise "a non-admin/
+  analyst gets 403" despite RBAC being a core security feature. `test_assets
+  .py::test_create_asset_requires_admin_or_analyst` is the first such test
+- `reset_rate_limiter` fixture - `slowapi`'s `Limiter` (added last pass)
+  uses a single process-wide in-memory store, not reset between tests;
+  without this, login-rate-limit tests would interfere with each other and
+  any other test hitting `/login` within the same pytest run
+- `seed_asset` fixture - shared setup reused by `test_assets.py`,
+  `test_dashboard.py`, `test_imports.py`
+- `app/tests/fixtures/sample_nessus_report.pdf` - the real sample Nessus
+  PDF used for manual testing all session (`uploads/VA_Scan.pdf`, gitignored
+  and therefore invisible to CI) copied to a tracked path. Confirmed
+  harmless demo/lab content (private IP range, generic OpenSSH CVEs)
+- `app/tests/test_assets.py` (9 tests), `app/tests/test_auth.py` (7 tests),
+  `app/tests/test_dashboard.py` (4 tests), `app/tests/test_imports.py`
+  (3 tests) - the suite goes from 45 to 68 tests
+- `backend/pytest.ini` (`testpaths = app/tests`)
+- `.github/workflows/backend-ci.yml` - two jobs on every push/PR to
+  `main`/`develop`: `test-sqlite` (fast, zero setup - both `pytest` and
+  `alembic upgrade head` work with zero env vars in a fresh checkout) and
+  `test-postgres` (real `postgres:18-alpine` service container, runs
+  `scripts/bootstrap_database.py` as a migrate+seed smoke test, then the
+  full suite against it) - this automates exactly the manual rootless-
+  Postgres verification used throughout this whole session, so the two
+  dialect-specific bugs found by hand in prior passes (naive/aware
+  `datetime` comparison, "database is locked" from the enrichment cache's
+  first design) would now be caught automatically on every push, not just
+  when someone happens to test against Postgres by hand
+
+### Notes
+- `test_auth.py::test_register_and_login_happy_path` surfaced a
+  pre-existing `DeprecationWarning`: `services/auth/auth.py` uses
+  `datetime.utcnow()` (deprecated in favor of `datetime.now(timezone.utc)`).
+  Not fixed here (out of scope, cosmetic, still functionally correct) -
+  tracked in TODO.md
+- `.github/workflows/backend-ci.yml` is written and YAML-syntax-validated
+  but **not executed** - this sandbox has no GitHub Actions runner/API
+  access, same honesty standard applied to the Docker files in the
+  database-foundation pass. The `test-postgres` job's steps were run
+  manually against a real Postgres instance and produced identical results
+  (68/68 passing), which is the closest verification possible here, but
+  the workflow itself should be watched on its first real push
+
+## v0.6-alpha10
+
+Security & reliability hardening: the second "industry level" axis after
+the database foundation. Covers the four things named up front (fragile
+CVE-enrichment scraping, no rate limiting, hardcoded `SECRET_KEY`
+fallback, inconsistent error responses), scoped down from a bigger
+DB-session-restructuring idea that turned out unnecessary once the real
+audit was done.
+
+### Added
+- `SECRET_KEY` fail-fast: new `ENVIRONMENT` env var (defaults to
+  `development`). Outside `development`/`local`/`test`, the app refuses
+  to start (`RuntimeError` at import time) if `SECRET_KEY` is unset,
+  equals the dev default, or equals the `.env.example` placeholder -
+  catches both "forgot to set it" and "copy-pasted the example verbatim"
+- Security middleware baseline: `CORSMiddleware` (env-configured
+  `CORS_ALLOWED_ORIGINS`, empty by default - no frontend exists yet, and
+  an empty list is safe since CORS only gates browser requests), and a
+  hand-rolled `SecurityHeadersMiddleware` (`app/middleware/`) setting
+  `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+  `Strict-Transport-Security`, `Content-Security-Policy` on every response
+- Rate limiting via `slowapi` (in-memory, no new infra): a global
+  100/minute default, and `POST /login` specifically limited to
+  5/minute/IP as a practical substitute for full account lockout
+  (there was previously zero brute-force protection on login)
+- Persistent CVE-enrichment cache: new `PluginEnrichmentCache` table
+  (`plugin_id`, `cve_ids`, `description`, `solution`, `status`,
+  `fetched_at`) + `repositories/enrichment/plugin_cache_repository.py`.
+  `services/enrichment/plugin_enrichment.py` checks the cache before
+  ever hitting tenable.com; a failed lookup is cached with a 24h TTL
+  before retrying (avoids hammering plugin IDs that reliably 404, while
+  still recovering from a transient outage)
+- Hand-rolled retry with exponential backoff on the outbound HTTP call
+  (3 attempts; retries timeouts/connection errors/5xx/429, does not
+  retry other 4xx since that means "no such plugin page," not transient)
+
+### Changed
+- 19 API-layer sites that returned a bare `{"message": "..."}` dict with
+  an implicit 200 for what was semantically an error now
+  `raise HTTPException(status_code=X, detail="...")` (16×404, 2×400,
+  1×401), matching the style already used correctly in
+  `frameworks.py`/`mappings.py`. `POST /register`'s validation moved
+  from `services/users/user_service.py` (an ambiguous dict-return) into
+  `api/users.py` (checks + raises), matching the "validate in API layer,
+  service does the write" pattern used by `create_risk`/
+  `framework_service.create_framework`
+- `app/api/imports.py`'s `upload_report` no longer leaks raw exception
+  text to the client (`{"error": str(error)}`, 200) - now
+  `HTTPException(500, "Failed to process import findings")`, full
+  traceback still logged server-side
+- `vulnerability_importer.py`'s three separate enrichment calls
+  collapsed into one `get_plugin_enrichment(db, plugin_id)`
+
+### Fixed (found via direct testing, not just code review)
+- A naive-vs-aware `datetime` comparison crashed the cache's TTL check
+  on SQLite: `DateTime(timezone=True)` columns don't reliably round-trip
+  tzinfo through SQLite specifically (Postgres does). Fixed by normalizing
+  to UTC-aware on read when the value comes back naive
+- **Design correction, caught empirically, not by inspection**: the
+  first version of the enrichment cache gave `plugin_enrichment.py` its
+  own short-lived DB session (independent of the caller's), reasoning
+  that it would protect a successful cache write from being discarded
+  if an unrelated later finding in the same import batch caused a
+  rollback. Direct testing of a real multi-finding import against a
+  file-based SQLite DB proved this reliably crashes with
+  `database is locked` - not a rare race, but near-certain, because
+  it's the same thread using two connections sequentially (one holding
+  an open write transaction), not a genuine concurrent-request race
+  that a busy_timeout could wait out. Reverted to sharing the caller's
+  session (`add()` + `flush()`, caller commits - the same convention
+  every other repository in this codebase already follows), accepting
+  the minor durability tradeoff (a lost cache entry on a whole-batch
+  rollback just costs one more network fetch next time) over a
+  near-guaranteed crash on the common case (any multi-finding import)
+
+### Tests
+- `app/tests/test_creation_validation.py`: 6 of 9 assertions updated for
+  the new status codes/`detail` field (the other 3 are success-path,
+  untouched)
+- No automated test coverage added for the enrichment retry/cache logic
+  itself (`test_imports.py` is still an empty stub) - verified manually
+  with mocked `requests.get` instead; tracked in TODO.md
+
+### Verified
+- Full 45-test suite green throughout, including against a real
+  PostgreSQL instance (rootless local, same technique as the DB
+  foundation pass) for both the baseline and new
+  `plugin_enrichment_cache` migrations
+- SECRET_KEY fail-fast confirmed in all 4 combinations (dev default,
+  prod+placeholder, prod+dev-default, prod+real secret)
+- Security headers present on every response; CORS correctly rejects an
+  unlisted origin; rate limiting confirmed 5×401 then 429 on repeated
+  `/login` failures
+- All 19 error-consistency sites confirmed returning their correct
+  status code via a live endpoint walkthrough
+- Enrichment: retry-then-succeed, cache-hit-skips-network,
+  non-transient-404-no-retry, and cached-failure-TTL all confirmed with
+  mocked network; the reverted-session-design fix confirmed against a
+  real 8-finding import on file-based SQLite (WAL mode) with zero lock
+  errors; durability tradeoff confirmed as documented (rollback
+  discards the cache write too)
+
+## v0.6-alpha9
+
+Database foundation work: PostgreSQL support, Alembic migrations, Docker,
+and real DB-level foreign key enforcement — first step of an "industry
+level" push, chosen as the highest-priority axis since everything else
+(observability, scale, further hardening) builds on top of it.
+
+### Added
+- `DATABASE_URL` is now environment-configured (`app/db/database.py`):
+  PostgreSQL via `postgresql+psycopg://...` (used in Docker/production),
+  or the unchanged SQLite zero-config local default (now anchored to
+  `BACKEND_DIR` instead of a bare relative path — see Fixed)
+- Alembic (`backend/alembic/`) is the sole schema authority. `env.py`
+  reuses the app's actual `engine`/`DATABASE_URL`/`Base` rather than
+  duplicating connection logic, so migrations get identical dialect
+  behavior to the running app. One hand-reviewed baseline migration
+  covers all 9 current tables/FKs (verified via full downgrade→upgrade
+  roundtrip on real PostgreSQL)
+- Foreign keys are now enforced at the database level, not just the
+  application layer added last pass: natively on PostgreSQL, and via a
+  `PRAGMA foreign_keys=ON` connect-event hook on SQLite (SQLite ignores
+  FK constraints by default unless told per-connection). Verified: an
+  insert with a nonexistent `category_id` is rejected by both dialects
+  (`ForeignKeyViolation` on Postgres, `IntegrityError` on SQLite) at the
+  database level, on top of the app-level checks added previously
+- `backend/Dockerfile` (non-root user, `psycopg[binary]` needs no
+  compiler toolchain), `backend/docker-entrypoint.sh` (runs
+  `bootstrap_database.py` then `uvicorn`), `docker-compose.yml` (repo
+  root: postgres + backend, healthcheck-gated startup order, named
+  volumes), `.env.example`, `backend/.dockerignore`
+- `python-dotenv` support in both `db/database.py` and `core/config.py`
+  (local `.env` populates `DATABASE_URL`/`SECRET_KEY` without manual
+  `export`; inert inside Docker, where compose injects real env vars)
+- Standard Alembic-recommended `MetaData` naming convention on `Base`,
+  so autogenerate produces stable, non-empty constraint names on both
+  dialects instead of dialect-dependent auto-generated ones
+
+### Fixed
+- `app/main.py` called `Base.metadata.create_all(bind=engine)` at
+  **import time** — including during every `pytest` run, since
+  `conftest.py` imports `app.main`, silently touching the real
+  `cyberrisk360.db` file even though tests then ran against an
+  isolated in-memory DB. Removed: schema management is now an explicit
+  step (`alembic upgrade head` / `bootstrap_database.py`), never an
+  app-startup side effect — avoids the "table already exists" conflict
+  that mixing `create_all()` with Alembic causes, and doesn't need
+  reconciling with multiple replicas later
+- `DATABASE_URL`'s SQLite default and `UPLOAD_DIR` were both bare
+  relative paths that resolved differently depending on process cwd —
+  caught in the wild as two different `cyberrisk360.db` files (one
+  empty, at repo root; the real one under `backend/`). Both now anchor
+  to `BACKEND_DIR`, matching how `FRAMEWORKS_DIR` already worked;
+  `api/imports.py` now imports `UPLOAD_DIR` from `core.constants`
+  instead of shadowing it with its own local relative string
+
+### Notes
+- `app/tests/conftest.py` is untouched and confirmed unaffected (it
+  builds its own separate in-memory SQLite engine, never imports the
+  real one) - verified by running the full 45-test suite with
+  `DATABASE_URL` pointed at real Postgres, all passing unmodified. One
+  explicit, deliberate gap: FK enforcement isn't wired into conftest's
+  engine, so the pytest suite doesn't exercise DB-level FK rejection
+  (only the app-level checks). Left as a safe one-line follow-up so
+  this pass didn't touch test behavior
+- Docker files are written and reviewed for correctness (YAML/shell
+  syntax validated) but **not executable in this environment** - the
+  Docker daemon socket isn't reachable here (`permission denied`).
+  Alembic/Postgres/pytest were all verified for real against a rootless
+  local PostgreSQL 18 instance instead
+- Two pre-Alembic SQLite files (`cyberrisk360.db` at repo root and
+  under `backend/`) were renamed to `*.pre-alembic-backup` rather than
+  deleted, since they predate `alembic_version` tracking and mixing
+  them with a fresh `alembic upgrade head` fails. Not deleted - your
+  call whether to keep or remove them
+
 ## v0.6-alpha8
 
 Full endpoint walkthrough (all 52 routes, real JWT auth flow, real PDF

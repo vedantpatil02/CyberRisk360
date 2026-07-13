@@ -72,3 +72,59 @@ def db_session():
 def client(db_session):
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture()
+def as_role():
+    """
+    Temporarily override the authenticated user's role for a single
+    test - the only way to exercise RBAC *denial* paths, since the
+    default override above always returns admin.
+    """
+
+    def _set(role):
+        app.dependency_overrides[get_current_user] = lambda: {
+            "sub": "test@example.com",
+            "role": role
+        }
+
+    yield _set
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+
+@pytest.fixture()
+def reset_rate_limiter():
+    """
+    slowapi's Limiter (app/core/rate_limiter.py) uses a single
+    process-wide in-memory store, not reset between tests - without
+    this, login-rate-limit tests would interfere with each other (and
+    with any other test hitting /login) within the same pytest run.
+    """
+
+    from app.core.rate_limiter import limiter
+
+    limiter.reset()
+
+    yield
+
+    limiter.reset()
+
+
+@pytest.fixture()
+def seed_asset(client):
+    """
+    Create a minimal asset and return its id - shared setup needed by
+    several test files (assets, dashboard, imports).
+    """
+
+    client.post("/assets", json={
+        "name": "web-01",
+        "asset_type": "server",
+        "owner": "IT",
+        "criticality": "High",
+        "ip_address": "10.0.0.5",
+        "environment": "prod"
+    })
+
+    return client.get("/assets").json()[0]["id"]

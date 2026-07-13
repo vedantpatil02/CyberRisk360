@@ -43,9 +43,68 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       `POST /risks` accepted nonexistent `asset_id`; `POST /vulnerabilities`
       accepted nonexistent `asset_id`/`risk_id` and skipped the CVSS range
       check that `PUT` already enforced. See `test_creation_validation.py`
+- [x] Database foundation: `DATABASE_URL` is env-configured (PostgreSQL
+      via `postgresql+psycopg://...`, SQLite zero-config default),
+      Alembic (`backend/alembic/`) is the sole schema authority with one
+      baseline migration covering all 9 tables, and foreign keys are now
+      enforced at the DB level on both dialects (not just the app-level
+      checks from the previous pass) - verified end-to-end against a
+      real PostgreSQL instance (migrations, bootstrap, full 45-test
+      pytest suite, FK rejection on bad inserts). `docker-compose.yml` +
+      `backend/Dockerfile` ship a working Postgres+backend setup
+      (written/reviewed, not executable in this environment - no Docker
+      daemon access here)
+- [x] Security & reliability hardening: `SECRET_KEY` fail-fast outside
+      dev (`ENVIRONMENT` env var), CORS + security-headers middleware,
+      `slowapi` rate limiting (100/min global, 5/min on `/login`), all
+      19 bare-`{"message":...}`-with-200 error sites converted to
+      proper `HTTPException`s, and a persistent CVE-enrichment cache
+      (`PluginEnrichmentCache`) with retry/backoff - replacing the
+      in-memory-only cache and single-attempt scraping. Caught and fixed
+      a real bug along the way: the cache's first design (its own DB
+      session) reliably crashed multi-finding SQLite imports with
+      "database is locked" - reverted to sharing the caller's session
+- [x] Test coverage & CI: filled in all 4 empty test files (45 → 68
+      tests) and added the first CI pipeline (`.github/workflows/
+      backend-ci.yml`, SQLite + real-Postgres jobs). Added an `as_role`
+      fixture closing a real gap - no test could previously exercise an
+      RBAC *denial* path. `.github/workflows/backend-ci.yml` itself is
+      unexecuted in this sandbox (no GitHub Actions runner access) -
+      watch its first real push
 
 ## Next up
 
+- [ ] Watch `.github/workflows/backend-ci.yml`'s first real run on
+      GitHub - written and YAML-validated here, its steps were run
+      manually with identical results (68/68 passing against real
+      Postgres), but the workflow itself was never executed by an
+      actual runner
+- [ ] `services/auth/auth.py` uses the deprecated `datetime.utcnow()`
+      (surfaced as a `DeprecationWarning` by the new `test_auth.py`) -
+      should move to `datetime.now(timezone.utc)`, cosmetic/low-priority
+- [ ] Rate limiting (`slowapi`) uses in-memory storage - fine for the
+      current single-instance `docker-compose.yml`, but needs a shared
+      backend (e.g. Redis) before ever running multiple backend
+      replicas, since each process would track limits independently
+- [ ] `get_remote_address` (rate limiting's key function) trusts
+      `request.client.host` directly - correct with no reverse proxy in
+      front today, but would need to trust `X-Forwarded-For` instead if
+      one is ever added, otherwise every request appears to come from
+      the proxy's IP
+- [ ] Add the same `PRAGMA foreign_keys=ON` connect-event to
+      `app/tests/conftest.py`'s isolated test engine, so the pytest
+      suite exercises DB-level FK rejection too (currently only the
+      app-level existence checks are covered by tests; deliberately
+      deferred so this pass didn't change any test behavior)
+- [ ] Verify the Docker setup (`docker-compose.yml`, `backend/Dockerfile`,
+      `backend/docker-entrypoint.sh`) with a real `docker compose up` in
+      an environment with daemon access - written and syntax-checked
+      here, but never actually built/run. Pay particular attention to
+      the `uploads` volume's ownership (non-root `appuser` needs write
+      access after the volume mounts over `/app/uploads`)
+- [ ] Decide whether to keep or delete the two renamed
+      `*.pre-alembic-backup` SQLite files (pre-date Alembic's
+      `alembic_version` tracking, superseded by `alembic upgrade head`)
 - [ ] **Two different, contradictory `compliance_score` definitions** for
       the same framework: `analytics/compliance.py` (used by
       `/compliance-summary` and `/dashboard/grc/{name}`) = % of controls
@@ -60,21 +119,6 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       manually-created vulnerabilities never get auto-mapped
 - [ ] No `GET /risks` (list all) endpoint exists, unlike every other
       resource (`assets`, `controls`, `vulnerabilities`, `frameworks`)
-- [ ] Write real test coverage for the rest of the API — only
-      `test_frameworks.py`, `test_mapping_engine.py`,
-      `test_mapping_status_analytics.py`, and `test_creation_validation.py`
-      have tests now; `test_assets.py`, `test_auth.py`, `test_dashboard.py`,
-      and `test_imports.py` are still empty stubs. `app/tests/conftest.py`
-      (in-memory SQLite + dependency overrides + `TestClient` fixture) is
-      in place for them to build on
-- [ ] SQLite foreign key enforcement is off by default (`PRAGMA
-      foreign_keys` is 0 unless explicitly enabled per-connection) - the
-      three FK-existence checks added in this pass close the concrete holes
-      found, but any other unvalidated FK write path has the same
-      underlying gap. Enabling it globally (`PRAGMA foreign_keys=ON` on
-      connect) would be the systemic fix, but wasn't done here since it
-      changes error behavior (silent orphan → `IntegrityError`/500) for
-      every FK in the schema at once and needs its own testing pass
 - [ ] Populate `mapping_rules.json` for the remaining three frameworks
       (`iso27001`, `cis`, `owasp-asvs` are still 0 bytes) — the mapping
       engine already merges whatever it finds, so this is pure data entry,
@@ -82,9 +126,18 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
 - [ ] Fix the Nessus PDF parser's multi-host bug
       (`app/importers/nessus_pdf_parser.py` attributes every finding in a
       report to the first IP address found in the document)
-- [ ] Reduce reliance on live tenable.com scraping in
-      `services/enrichment/plugin_enrichment.py` (fragile, no persistent
-      cache, no retry/backoff)
+- [ ] `vulnerability_importer.py`'s `import_findings` still holds one
+      DB session/transaction open across a whole import batch's worth
+      of sequential enrichment lookups, only committing at the end (or
+      rolling everything back on any failure). The persistent cache
+      (this pass) means most of those lookups skip the network
+      entirely after the first import, but a large *first-time* import
+      still serializes real network calls inside one long-held
+      transaction. Fixing this properly means restructuring
+      `import_findings` into two phases (enrich-then-write) -
+      deliberately deferred twice now (database-foundation pass and
+      this one) as a bigger scalability refactor, not a "fragile
+      dependency" reliability fix
 
 ## Deferred (explicitly out of scope per Phase 1 Stabilization)
 
@@ -92,7 +145,6 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       stubs)
 - [ ] `services/enrichment/cve_enrichment.py` (currently a no-op)
 - [ ] `backend/app/reports/*.py` report generation (all empty stubs)
-- [ ] PostgreSQL + Alembic migration tooling
 - [ ] Additional frameworks: PCI DSS, SOC 2, HIPAA, NIST SP 800-53
-- [ ] Docker / Kubernetes deployment
+- [ ] Kubernetes deployment (Docker/Compose done - see Done section)
 - [ ] React frontend

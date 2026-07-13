@@ -1,0 +1,61 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  test-sqlite:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install -r requirements.txt
+
+      - run: pytest -v
+
+  test-postgres:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: cyberrisk360
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: cyberrisk360
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://cyberrisk360:testpass@localhost:5432/cyberrisk360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install -r requirements.txt
+
+      # Runs Alembic migrations + imports all frameworks - the same
+      # "does the full setup path work end-to-end" smoke test used
+      # for local dev and Docker (backend/docker-entrypoint.sh).
+      - name: Migrate + seed frameworks (smoke test)
+        run: python scripts/bootstrap_database.py
+
+      - run: pytest -v
