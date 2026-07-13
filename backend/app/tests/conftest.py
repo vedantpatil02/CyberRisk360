@@ -9,6 +9,7 @@ FastAPI TestClient with auth/db dependencies overridden.
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy import event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -25,6 +26,20 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool
 )
+
+
+@event.listens_for(engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+    """
+    Same enforcement as app/db/database.py's real engine - without
+    this, the test suite would only ever exercise the app-level FK
+    existence checks (assets.py/risks.py/vulnerabilities.py/
+    controls.py), never the DB-level constraint itself.
+    """
+
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,

@@ -1,0 +1,18 @@
+{
+    "cve": {},
+    "cwe": {
+        "CWE-798": ["CIS-5"],
+        "CWE-287": ["CIS-5"],
+        "CWE-521": ["CIS-5"]
+    },
+    "plugin_id": {},
+    "keyword": {
+        "account": ["CIS-5"],
+        "password": ["CIS-5"],
+        "credential": ["CIS-5"],
+        "default login": ["CIS-5"],
+        "unauthorized device": ["CIS-1"],
+        "asset inventory": ["CIS-1"],
+        "rogue device": ["CIS-1"]
+    }
+}

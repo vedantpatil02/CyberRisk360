@@ -1,0 +1,16 @@
+{
+    "cve": {},
+    "cwe": {
+        "CWE-1188": ["A.5.1"],
+        "CWE-798": ["A.5.1"]
+    },
+    "plugin_id": {},
+    "keyword": {
+        "default password": ["A.5.1"],
+        "default credential": ["A.5.1"],
+        "policy": ["A.5.1"],
+        "unauthorized device": ["A.8.1"],
+        "asset inventory": ["A.8.1"],
+        "unmanaged device": ["A.8.1"]
+    }
+}

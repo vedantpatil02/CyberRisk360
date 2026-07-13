@@ -80,6 +80,23 @@ def create_risk(
         "level": level
     }
 
+@router.get("/risks")
+def get_risks(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Retrieve all risks.
+    """
+
+    return db_get_all_risks(db)
+
 @router.get("/risks/{risk_id}")
 def get_risk(
     risk_id: int,
