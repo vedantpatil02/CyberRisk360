@@ -1,3 +1,93 @@
+## v0.6-alpha14
+
+### Fixed
+- Resolved the `compliance_score` naming collision: `GET
+  /frameworks/{name}/summary` (`api/controls.py`) computed something
+  genuinely different from `analytics/compliance.py`'s `compliance_score`
+  (used by `/compliance-summary` and `/dashboard/grc/{name}`) - the
+  former is 100% minus % of controls with an approved vulnerability
+  mapping, the latter is % of controls manually marked `"Implemented"`.
+  Both were called `compliance_score`, so they could (and did, in
+  testing) disagree for the same framework at the same instant. Per
+  explicit direction: renamed `api/controls.py`'s field to
+  `vulnerability_coverage_score` rather than picking one definition as
+  canonical - both metrics are legitimate and answer different
+  questions, they just needed to stop sharing a name. No behavior
+  change, no value change - purely a response-field rename
+
+## v0.6-alpha13
+
+### Changed
+- `POST /vulnerabilities` (manual entry) now runs the mapping engine
+  automatically, same as PDF-imported vulnerabilities - previously only
+  `import_findings` called `map_vulnerability_to_controls`, so
+  manually-created vulnerabilities silently got no mapping at all,
+  which undercut the mapping engine's whole purpose for an entire
+  creation pathway. `VulnerabilityCreate` has no `cve_id`/`plugin_id`
+  fields, so manual entries only ever match via keyword - narrower
+  than imports, but still real value (e.g. "Weak SSH configuration"
+  correctly matches the same keyword rules a PDF-imported finding
+  would). `db_create_vulnerability`'s docstring already said "Caller
+  flushes to obtain an id for control mapping" - this was clearly the
+  intent from the start, just never wired up in this one endpoint
+
+### Tests
+- `test_create_vulnerability_triggers_mapping_engine` - 76 tests total
+
+### Removed
+- The two `*.pre-alembic-backup` SQLite files (repo root and
+  `backend/`), per explicit user instruction - they pre-dated Alembic's
+  `alembic_version` tracking and were fully superseded by
+  `alembic upgrade head`
+
+## v0.6-alpha12
+
+TODO.md backlog cleanup: 5 of the smaller flagged items, chosen as the
+ones that were genuinely actionable code/data fixes rather than product
+decisions only the user can make (the `compliance_score` contradiction,
+whether `POST /vulnerabilities` should auto-map, and the `.pre-alembic-
+backup` file disposition are all still open, deliberately not decided here).
+
+### Fixed
+- `services/auth/auth.py` used the deprecated `datetime.utcnow()` -
+  moved to `datetime.now(timezone.utc)`
+- **Nessus PDF parser's multi-host bug**: `extract_findings` used to take
+  the first IP address anywhere in the whole document and attribute
+  every finding to it. A single-host report (the only shape the real
+  sample fixture has) never surfaced this - both the old and new code
+  produce identical output against it. Rewrote to track the current host
+  as running state instead: a line that's just an IP marks the start of
+  that host's "Vulnerabilities by Host" block, and every finding after
+  it is attributed to that host until the next one. Also handles a real
+  quirk confirmed against the actual sample PDF's extracted text: pypdf
+  sometimes glues the per-page footer ("`<ip> <page>`") directly onto the
+  start of the next finding line with no newline. Verified with a
+  synthetic 2-host report: findings on host A/B were correctly separated
+  (would have all been attributed to host A under the old code)
+
+### Added
+- `app/tests/conftest.py`'s isolated test engine now has the same
+  `PRAGMA foreign_keys=ON` connect-event as the real app engine -
+  previously only the app-level FK-existence checks were exercised by
+  tests, never the DB constraint itself. New
+  `test_db_level_fk_enforcement_rejects_orphaned_control` proves it
+- `GET /risks` (list all) - the one resource missing this endpoint while
+  every other one (`assets`, `controls`, `vulnerabilities`, `frameworks`)
+  already had it
+- Real `mapping_rules.json` content for the 3 frameworks that were still
+  0 bytes (`iso27001`, `cis`, `owasp-asvs`) - CVE/CWE/keyword entries
+  matching the format used for `nist-csf`/`owasp-top10`. Confirmed the
+  mapping engine merges all 5 correctly, including real cross-framework
+  overlap (e.g. `CWE-798` now maps to controls in `cis`, `iso27001`,
+  `nist-csf`, `owasp-asvs`, and `owasp-top10` simultaneously - a single
+  real vulnerability legitimately violates multiple standards at once)
+- `app/tests/test_risks.py`, `app/tests/test_nessus_pdf_parser.py` -
+  suite goes from 68 to 75 tests
+
+### Verified
+- Full suite green throughout (including against real Postgres for the
+  final state) and unchanged behavior on the real sample PDF
+
 ## v0.6-alpha11
 
 Test coverage & CI/CD: the third "industry level" axis. Fills in the four

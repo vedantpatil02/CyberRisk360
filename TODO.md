@@ -71,17 +71,36 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       RBAC *denial* path. `.github/workflows/backend-ci.yml` itself is
       unexecuted in this sandbox (no GitHub Actions runner access) -
       watch its first real push
+- [x] TODO.md backlog cleanup: fixed the deprecated `datetime.utcnow()`
+      in `services/auth/auth.py`; added `GET /risks`; populated
+      `mapping_rules.json` for `iso27001`/`cis`/`owasp-asvs`; fixed the
+      Nessus PDF parser's multi-host bug (was attributing every finding
+      to the first IP anywhere in the document - now tracks current host
+      as running state, verified with a synthetic 2-host report since
+      the real sample fixture is single-host); added the same
+      `PRAGMA foreign_keys=ON` to `conftest.py`'s test engine as the
+      real app engine has. 68 → 75 tests
+- [x] `POST /vulnerabilities` (manual entry) now runs the mapping engine
+      automatically, same as PDF import - previously silently skipped,
+      an inconsistency that undercut the mapping engine's purpose for
+      an entire creation pathway. Keyword-only (no `cve_id`/`plugin_id`
+      in this schema). 75 → 76 tests
+- [x] Deleted the two `*.pre-alembic-backup` SQLite files (pre-dated
+      Alembic's `alembic_version` tracking, fully superseded by
+      `alembic upgrade head`)
+- [x] Resolved the `compliance_score` naming collision: renamed
+      `api/controls.py`'s `GET /frameworks/{name}/summary` field to
+      `vulnerability_coverage_score` per explicit direction (neither
+      definition picked as canonical - both are legitimate, they just
+      needed to stop sharing a name). No behavior/value change
 
 ## Next up
 
 - [ ] Watch `.github/workflows/backend-ci.yml`'s first real run on
       GitHub - written and YAML-validated here, its steps were run
-      manually with identical results (68/68 passing against real
+      manually with identical results (75/75 passing against real
       Postgres), but the workflow itself was never executed by an
       actual runner
-- [ ] `services/auth/auth.py` uses the deprecated `datetime.utcnow()`
-      (surfaced as a `DeprecationWarning` by the new `test_auth.py`) -
-      should move to `datetime.now(timezone.utc)`, cosmetic/low-priority
 - [ ] Rate limiting (`slowapi`) uses in-memory storage - fine for the
       current single-instance `docker-compose.yml`, but needs a shared
       backend (e.g. Redis) before ever running multiple backend
@@ -91,41 +110,12 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       front today, but would need to trust `X-Forwarded-For` instead if
       one is ever added, otherwise every request appears to come from
       the proxy's IP
-- [ ] Add the same `PRAGMA foreign_keys=ON` connect-event to
-      `app/tests/conftest.py`'s isolated test engine, so the pytest
-      suite exercises DB-level FK rejection too (currently only the
-      app-level existence checks are covered by tests; deliberately
-      deferred so this pass didn't change any test behavior)
 - [ ] Verify the Docker setup (`docker-compose.yml`, `backend/Dockerfile`,
       `backend/docker-entrypoint.sh`) with a real `docker compose up` in
       an environment with daemon access - written and syntax-checked
       here, but never actually built/run. Pay particular attention to
       the `uploads` volume's ownership (non-root `appuser` needs write
       access after the volume mounts over `/app/uploads`)
-- [ ] Decide whether to keep or delete the two renamed
-      `*.pre-alembic-backup` SQLite files (pre-date Alembic's
-      `alembic_version` tracking, superseded by `alembic upgrade head`)
-- [ ] **Two different, contradictory `compliance_score` definitions** for
-      the same framework: `analytics/compliance.py` (used by
-      `/compliance-summary` and `/dashboard/grc/{name}`) = % of controls
-      manually marked `"Implemented"`; `api/controls.py`'s
-      `GET /frameworks/{name}/summary` = 100% minus % of controls with an
-      approved vulnerability mapping. These can read 0% and 100% for the
-      same framework simultaneously. Needs a product decision on which is
-      canonical (or rename one so it's not both called "compliance_score")
-- [ ] Decide whether `POST /vulnerabilities` (manual entry) should also run
-      the mapping engine - today only the PDF import pipeline
-      (`import_findings`) calls `map_vulnerability_to_controls`, so
-      manually-created vulnerabilities never get auto-mapped
-- [ ] No `GET /risks` (list all) endpoint exists, unlike every other
-      resource (`assets`, `controls`, `vulnerabilities`, `frameworks`)
-- [ ] Populate `mapping_rules.json` for the remaining three frameworks
-      (`iso27001`, `cis`, `owasp-asvs` are still 0 bytes) — the mapping
-      engine already merges whatever it finds, so this is pure data entry,
-      no code changes needed
-- [ ] Fix the Nessus PDF parser's multi-host bug
-      (`app/importers/nessus_pdf_parser.py` attributes every finding in a
-      report to the first IP address found in the document)
 - [ ] `vulnerability_importer.py`'s `import_findings` still holds one
       DB session/transaction open across a whole import batch's worth
       of sequential enrichment lookups, only committing at the end (or

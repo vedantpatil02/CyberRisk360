@@ -100,7 +100,7 @@ def test_framework_summary_endpoint_ignores_pending_mappings(client, db_session)
     before = response.json()
 
     assert before["affected_controls"] == 0
-    assert before["compliance_score"] == 100.0
+    assert before["vulnerability_coverage_score"] == 100.0
 
     approved = next(m for m in created if m.matched_value == "ssh")
     review_mapping(db_session, approved.id, approve=True, reviewer="a@example.com")
@@ -109,4 +109,4 @@ def test_framework_summary_endpoint_ignores_pending_mappings(client, db_session)
     after = response.json()
 
     assert after["affected_controls"] > 0
-    assert after["compliance_score"] < 100.0
+    assert after["vulnerability_coverage_score"] < 100.0

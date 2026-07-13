@@ -276,8 +276,15 @@ def get_framework_summary(
     )
 ):
     """
-    Return compliance summary
-    for a framework.
+    Return vulnerability-mapping coverage for a framework's controls.
+
+    This is deliberately NOT called "compliance_score" - that name is
+    owned by analytics/compliance.py (% of controls manually marked
+    "Implemented", used by /compliance-summary and
+    /dashboard/grc/{name}). This endpoint measures something different
+    (100% minus % of controls with an approved vulnerability mapping)
+    and the two could disagree for the same framework at the same
+    time if both were called "compliance_score".
     """
 
     controls = get_controls_by_framework(db, framework_name)
@@ -306,7 +313,7 @@ def get_framework_summary(
                 vulnerability_count
             )
 
-    compliance_score = (
+    vulnerability_coverage_score = (
         (
             total_controls
             - affected_controls
@@ -331,9 +338,9 @@ def get_framework_summary(
         "affected_vulnerabilities":
             affected_vulnerabilities,
 
-        "compliance_score":
+        "vulnerability_coverage_score":
             round(
-                compliance_score,
+                vulnerability_coverage_score,
                 2
             )
     }
