@@ -65,6 +65,12 @@ from app.repositories.controls.control_repository import (
     search_controls_by_title,
     get_controls_by_vulnerability
 )
+from app.repositories.assets.asset_repository import (
+    get_asset
+)
+from app.repositories.risks.risk_repository import (
+    get_risk
+)
 
 
 router = APIRouter()
@@ -84,6 +90,29 @@ def create_vulnerability(
     """
     Create a vulnerability record.
     """
+
+    if not validate_cvss_score(
+        vulnerability.cvss_score
+    ):
+
+        return {
+            "message":
+            "Invalid CVSS score"
+        }
+
+    if not get_asset(db, vulnerability.asset_id):
+
+        return {
+            "message":
+            "Asset not found"
+        }
+
+    if not get_risk(db, vulnerability.risk_id):
+
+        return {
+            "message":
+            "Risk not found"
+        }
 
     severity = calculate_severity(
         vulnerability.cvss_score

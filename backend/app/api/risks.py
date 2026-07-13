@@ -19,6 +19,9 @@ from app.repositories.risks.risk_repository import (
     create_risk as db_create_risk,
     update_risk as db_update_risk
 )
+from app.repositories.assets.asset_repository import (
+    get_asset
+)
 
 
 router = APIRouter()
@@ -41,6 +44,12 @@ def create_risk(
     Only Admins and Analysts
     can create risks.
     """
+
+    if not get_asset(db, risk.asset_id):
+
+        return {
+            "message": "Asset not found"
+        }
 
     score = calculate_risk_score(
         risk.impact,

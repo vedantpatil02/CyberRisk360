@@ -16,7 +16,7 @@ from app.dependencies.database import get_db
 
 from app.dependencies.rbac import require_role
 
-from app.core.constants import ROLE_ADMIN, ROLE_ANALYST, ROLE_AUDITOR, CONTROL_STATUS_MISSING
+from app.core.constants import ROLE_ADMIN, ROLE_ANALYST, ROLE_AUDITOR, CONTROL_STATUS_MISSING, MAPPING_STATUS_APPROVED
 
 from app.analytics.compliance import calculate_compliance_summary
 
@@ -35,6 +35,9 @@ from app.repositories.vulnerabilities.vulnerability_repository import (
 from app.repositories.vulnerability_control_mappings.mapping_repository import (
     count_by_control
 )
+from app.repositories.categories.category_repository import (
+    get_category
+)
 
 router = APIRouter()
 
@@ -52,6 +55,13 @@ def create_control(
     """
     Create a compliance control.
     """
+
+    if not get_category(db, control.category_id):
+
+        return {
+            "message":
+            "Category not found"
+        }
 
     db_create_control(
         db,
@@ -281,7 +291,11 @@ def get_framework_summary(
 
     for control in controls:
 
-        vulnerability_count = count_by_control(db, control.id)
+        # Only approved mappings count toward compliance - a
+        # pending, unreviewed match shouldn't move the score.
+        vulnerability_count = count_by_control(
+            db, control.id, status=MAPPING_STATUS_APPROVED
+        )
 
         if vulnerability_count > 0:
 

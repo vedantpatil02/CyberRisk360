@@ -15,6 +15,9 @@ from app.repositories.vulnerability_control_mappings.mapping_repository import (
 from app.repositories.vulnerabilities.vulnerability_repository import (
     get_vulnerability
 )
+from app.core.constants import (
+    MAPPING_STATUS_APPROVED
+)
 
 
 def get_control_risk_analysis(
@@ -32,7 +35,11 @@ def get_control_risk_analysis(
 
     for control in controls:
 
-        mappings = get_by_control(db, control.id)
+        # Only approved mappings feed the risk score - an unreviewed
+        # match shouldn't inflate a control's calculated risk.
+        mappings = get_by_control(
+            db, control.id, status=MAPPING_STATUS_APPROVED
+        )
 
         critical = 0
         high = 0

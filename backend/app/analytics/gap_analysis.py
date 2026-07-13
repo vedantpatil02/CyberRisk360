@@ -11,6 +11,9 @@ from app.repositories.controls.control_repository import (
 from app.repositories.vulnerability_control_mappings.mapping_repository import (
     count_by_control
 )
+from app.core.constants import (
+    MAPPING_STATUS_APPROVED
+)
 
 
 def get_framework_gaps(
@@ -29,7 +32,11 @@ def get_framework_gaps(
 
     for control in controls:
 
-        mapping_count = count_by_control(db, control.id)
+        # Only approved mappings count as coverage - a pending,
+        # unreviewed match shouldn't make a control look addressed.
+        mapping_count = count_by_control(
+            db, control.id, status=MAPPING_STATUS_APPROVED
+        )
 
         control_data = {
             "control_id":
