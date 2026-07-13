@@ -3,14 +3,19 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.dependencies.database import get_db
-from app.models.asset import Asset
-from app.models.vulnerability import Vulnerability
-from sqlalchemy import func
 from app.analytics.grc import get_grc_dashboard
 from app.dependencies.rbac import require_role
 from app.core.constants import ROLE_ADMIN, ROLE_ANALYST,ROLE_AUDITOR
 from app.analytics.executive import (
     get_executive_dashboard
+)
+
+from app.repositories.assets.asset_repository import (
+    count_assets,
+    get_top_assets_by_vulnerability_count
+)
+from app.repositories.vulnerabilities.vulnerability_repository import (
+    get_all_vulnerabilities
 )
 
 
@@ -23,15 +28,9 @@ def dashboard_overview(
     db: Session = Depends(get_db)
 ):
 
-    assets = (
-        db.query(Asset)
-        .count()
-    )
+    assets = count_assets(db)
 
-    vulnerabilities = (
-        db.query(Vulnerability)
-        .all()
-    )
+    vulnerabilities = get_all_vulnerabilities(db)
 
     summary = {
         "total_assets": assets,
@@ -62,33 +61,7 @@ def dashboard_overview(
         if status in summary:
             summary[status] += 1
 
-    top_assets = (
-        db.query(
-            Asset.id,
-            Asset.name,
-            func.count(
-                Vulnerability.id
-            ).label(
-                "vulnerability_count"
-            )
-        )
-        .join(
-            Vulnerability,
-            Vulnerability.asset_id
-            == Asset.id
-        )
-        .group_by(
-            Asset.id,
-            Asset.name
-        )
-        .order_by(
-            func.count(
-                Vulnerability.id
-            ).desc()
-        )
-        .limit(5)
-        .all()
-    )
+    top_assets = get_top_assets_by_vulnerability_count(db, limit=5)
 
     summary["top_assets"] = []
 

@@ -6,9 +6,31 @@
 
 **Version:** v0.6 (Enterprise Compliance Engine)
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 
 **Last Updated:** July 2026
+
+---
+
+# 0. Implementation Status
+
+As of July 2026, the layered architecture described in this document is
+fully implemented, not just aspirational:
+
+- The repository layer (Section 6, "Repositories") is implemented across
+  `assets`, `categories`, `controls`, `frameworks`, `risks`,
+  `vulnerabilities`, `users`, and `vulnerability_control_mappings`.
+- `services/` no longer queries models directly — it calls repositories.
+- `analytics/` no longer performs direct SQL/ORM queries (Section 6,
+  "Analytics Layer") — it receives data via repository calls.
+- `api/` routes call services/repositories only, with no inline `db.query`,
+  model construction, or business logic (Section 6, "API Layer").
+- The Control schema migration described in ADR-001 (Section 7,
+  "Compliance Architecture") is complete repository-wide — no remaining
+  code references the old flat `Control.framework`/`Control.name` fields.
+- The framework import workflow (Section 9) is functional end-to-end for
+  all four supported frameworks (NIST CSF, ISO 27001, CIS Controls,
+  OWASP ASVS).
 
 ---
 

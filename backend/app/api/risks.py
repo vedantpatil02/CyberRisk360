@@ -3,7 +3,6 @@ from fastapi import Depends
 
 from sqlalchemy.orm import Session
 
-from app.models.risk import Risk
 from app.schemas.risk import RiskCreate
 
 from app.dependencies.database import get_db
@@ -13,6 +12,13 @@ from app.core.constants import *
 from app.services.risks.risk import calculate_risk_score, calculate_risk_level
 from app.schemas.risk_update import RiskUpdate
 from app.analytics.risk_summary import initialize_summary
+
+from app.repositories.risks.risk_repository import (
+    get_all_risks as db_get_all_risks,
+    get_risk as db_get_risk,
+    create_risk as db_create_risk,
+    update_risk as db_update_risk
+)
 
 
 router = APIRouter()
@@ -36,19 +42,17 @@ def create_risk(
     can create risks.
     """
 
-    # Calculate risk score
     score = calculate_risk_score(
         risk.impact,
         risk.likelihood
     )
 
-    # Determine risk severity
     level = calculate_risk_level(
         score
     )
 
-    # Create database record
-    new_risk = Risk(
+    db_create_risk(
+        db,
         title=risk.title,
         description=risk.description,
         asset_id=risk.asset_id,
@@ -58,12 +62,6 @@ def create_risk(
         risk_level=level,
         owner=risk.owner
     )
-
-    # Save risk into database
-    db.add(new_risk)
-
-    # Commit transaction
-    db.commit()
 
     return {
         "message": "Risk created",
@@ -87,11 +85,7 @@ def get_risk(
     Retrieve a specific risk.
     """
 
-    risk = (
-        db.query(Risk)
-        .filter(Risk.id == risk_id)
-        .first()
-    )
+    risk = db_get_risk(db, risk_id)
 
     if not risk:
 
@@ -118,11 +112,7 @@ def update_risk(
     Update an existing risk.
     """
 
-    risk = (
-        db.query(Risk)
-        .filter(Risk.id == risk_id)
-        .first()
-    )
+    risk = db_get_risk(db, risk_id)
 
     if not risk:
 
@@ -134,14 +124,6 @@ def update_risk(
         exclude_unset=True
     )
 
-    for field, value in update_data.items():
-
-        setattr(
-            risk,
-            field,
-            value
-        )
-
     # Recalculate score if impact or likelihood changes
     if (
         risk_update.impact is not None
@@ -149,20 +131,24 @@ def update_risk(
         risk_update.likelihood is not None
     ):
 
-        risk.risk_score = (
-            calculate_risk_score(
-                risk.impact,
-                risk.likelihood
-            )
+        new_impact = update_data.get(
+            "impact", risk.impact
         )
 
-        risk.risk_level = (
-            calculate_risk_level(
-                risk.risk_score
-            )
+        new_likelihood = update_data.get(
+            "likelihood", risk.likelihood
         )
 
-    db.commit()
+        update_data["risk_score"] = calculate_risk_score(
+            new_impact,
+            new_likelihood
+        )
+
+        update_data["risk_level"] = calculate_risk_level(
+            update_data["risk_score"]
+        )
+
+    db_update_risk(db, risk, update_data)
 
     return {
         "message": "Risk updated"
@@ -185,11 +171,7 @@ def close_risk(
     Close an existing risk.
     """
 
-    risk = (
-        db.query(Risk)
-        .filter(Risk.id == risk_id)
-        .first()
-    )
+    risk = db_get_risk(db, risk_id)
 
     if not risk:
 
@@ -197,11 +179,11 @@ def close_risk(
             "message": "Risk not found"
         }
 
-    risk.status = (
-        RISK_STATUS_CLOSED
+    db_update_risk(
+        db,
+        risk,
+        {"status": RISK_STATUS_CLOSED}
     )
-
-    db.commit()
 
     return {
         "message": "Risk closed"
@@ -223,17 +205,12 @@ def get_risk_summary(
     for all risks.
     """
 
-    # Fetch all risks from database
-    risks = db.query(
-        Risk
-    ).all()
+    risks = db_get_all_risks(db)
 
-    # Initialize dashboard counters
     summary = initialize_summary()
 
     for risk in risks:
 
-        # Count risk levels
         if risk.risk_level:
 
             level = (
@@ -244,7 +221,6 @@ def get_risk_summary(
 
                 summary[level] += 1
 
-        # Count open risks
         if (
             risk.status
             ==
@@ -253,7 +229,6 @@ def get_risk_summary(
 
             summary[SUMMARY_OPEN] += 1
 
-        # Count closed risks
         elif (
             risk.status
             ==

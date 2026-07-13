@@ -85,6 +85,12 @@ Current tables are relatively independent and provide the foundation for future 
 
 # 4. Target Entity Relationship (ER) Diagram
 
+**Status: implemented.** As of July 2026, this is the live schema — the
+Framework → Category → Control hierarchy is in place, the repository layer
+(Section 9's data flow) is wired end-to-end, and the framework importer
+populates this structure directly from `frameworks/<name>/<version>/`
+metadata and definitions.
+
 The target architecture introduces compliance framework normalization and hierarchical relationships.
 
 ```text

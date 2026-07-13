@@ -3,11 +3,8 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.models.user import User
-
-
-from app.services.security.security import verify_password
 from app.services.auth.auth import create_access_token
+from app.services.users.user_service import authenticate_user
 from app.dependencies.database import get_db
 from app.dependencies.security import get_current_user
 
@@ -24,24 +21,13 @@ def login(
     Authenticate user and return JWT token.
     """
 
-    user = (
-        db.query(User)
-        .filter(
-            User.email == form_data.username
-        )
-        .first()
+    user = authenticate_user(
+        db,
+        form_data.username,
+        form_data.password
     )
 
     if not user:
-
-        return {
-            "message": "Invalid credentials"
-        }
-
-    if not verify_password(
-        form_data.password,
-        user.password
-    ):
 
         return {
             "message": "Invalid credentials"

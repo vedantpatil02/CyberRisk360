@@ -5,9 +5,11 @@ Purpose:
 Generate framework gap analysis.
 """
 
-from app.models.control import Control
-from app.models.vulnerability_control_mapping import (
-    VulnerabilityControlMapping
+from app.repositories.controls.control_repository import (
+    get_controls_by_framework
+)
+from app.repositories.vulnerability_control_mappings.mapping_repository import (
+    count_by_control
 )
 
 
@@ -20,37 +22,21 @@ def get_framework_gaps(
     unaffected controls.
     """
 
-    controls = (
-        db.query(Control)
-        .filter(
-            Control.framework
-            == framework_name
-        )
-        .all()
-    )
+    controls = get_controls_by_framework(db, framework_name)
 
     affected_controls = []
     unaffected_controls = []
 
     for control in controls:
 
-        mapping_count = (
-            db.query(
-                VulnerabilityControlMapping
-            )
-            .filter(
-                VulnerabilityControlMapping.control_id
-                == control.id
-            )
-            .count()
-        )
+        mapping_count = count_by_control(db, control.id)
 
         control_data = {
             "control_id":
                 control.control_id,
 
             "name":
-                control.name,
+                control.title,
 
             "affected_vulnerabilities":
                 mapping_count

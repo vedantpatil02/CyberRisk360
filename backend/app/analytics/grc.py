@@ -19,7 +19,9 @@ from app.analytics.control_risk_analysis import (
     get_control_risk_analysis
 )
 
-from app.models.control import Control
+from app.repositories.controls.control_repository import (
+    get_controls_by_framework
+)
 
 def get_grc_dashboard(
     db,
@@ -29,14 +31,7 @@ def get_grc_dashboard(
     Return executive GRC dashboard.
     """
 
-    controls = (
-        db.query(Control)
-        .filter(
-            Control.framework
-            == framework_name
-        )
-        .all()
-    )
+    controls = get_controls_by_framework(db, framework_name)
 
     summary = (
         calculate_compliance_summary(

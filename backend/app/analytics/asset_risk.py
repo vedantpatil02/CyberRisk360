@@ -7,9 +7,11 @@ for assets based on
 associated vulnerabilities.
 """
 
-from app.models.asset import Asset
-from app.models.vulnerability import (
-    Vulnerability
+from app.repositories.assets.asset_repository import (
+    get_all_assets
+)
+from app.repositories.vulnerabilities.vulnerability_repository import (
+    get_by_asset
 )
 
 
@@ -21,23 +23,13 @@ def get_asset_risk_summary(
     for all assets.
     """
 
-    assets = (
-        db.query(Asset)
-        .all()
-    )
+    assets = get_all_assets(db)
 
     results = []
 
     for asset in assets:
 
-        vulnerabilities = (
-            db.query(Vulnerability)
-            .filter(
-                Vulnerability.asset_id
-                == asset.id
-            )
-            .all()
-        )
+        vulnerabilities = get_by_asset(db, asset.id)
 
         critical = 0
         high = 0

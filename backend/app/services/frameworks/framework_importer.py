@@ -14,27 +14,48 @@ from app.core.constants import (
     CONTROL_STATUS_MISSING
 )
 
+from app.repositories.frameworks.framework_repository import (
+    get_or_create_framework
+)
+
+from app.repositories.categories.category_repository import (
+    get_or_create_category
+)
+
+from app.repositories.controls.control_repository import (
+    get_control_by_code
+)
+
 
 def import_framework(
-    framework_name: str,
+    metadata: dict,
     controls: list,
     db
 ):
     """
-    Import controls and skip duplicates.
+    Import a framework's metadata, a default
+    category, and its controls, skipping duplicates.
     """
+
+    framework = get_or_create_framework(
+        db,
+        metadata
+    )
+
+    category = get_or_create_category(
+        db,
+        framework.id,
+        "GENERAL",
+        "General Controls"
+    )
 
     imported_count = 0
 
     for control in controls:
 
-        existing_control = (
-            db.query(Control)
-            .filter(
-                Control.control_id == control["control_id"],
-                Control.framework == framework_name
-            )
-            .first()
+        existing_control = get_control_by_code(
+            db,
+            control["control_id"]
         )
 
         if existing_control:
@@ -42,9 +63,9 @@ def import_framework(
 
         new_control = Control(
             control_id=control["control_id"],
-            name=control["name"],
+            title=control["name"],
             description=control["description"],
-            framework=framework_name,
+            category_id=category.id,
             status=CONTROL_STATUS_MISSING
         )
 

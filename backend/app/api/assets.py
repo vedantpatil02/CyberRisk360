@@ -2,25 +2,31 @@ from fastapi import Depends
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
 
-from app.db.database import SessionLocal
-
-from app.models.asset import Asset
-
 from app.schemas.asset import AssetCreate
 from app.dependencies.database import get_db
+from app.dependencies.security import (
+    get_current_user
+)
+from app.dependencies.rbac import (
+    require_role
+)
 from app.core.constants import *
-
-from app.models.vulnerability import Vulnerability
 
 from app.analytics.asset_risk import (
     get_asset_risk_summary
 )
 
+from app.repositories.assets.asset_repository import (
+    get_all_assets,
+    get_asset,
+    create_asset as db_create_asset
+)
+from app.repositories.vulnerabilities.vulnerability_repository import (
+    get_by_asset
+)
+
 router = APIRouter()
 
-from app.dependencies.rbac import (
-    require_role
-)
 @router.post("/assets")
 def create_asset(
     asset: AssetCreate,
@@ -33,10 +39,8 @@ def create_asset(
     )
 ):
 
-    
-    # Create a new asset record from request data
-
-    new_asset = Asset(
+    db_create_asset(
+        db,
         name=asset.name,
         asset_type=asset.asset_type,
         owner=asset.owner,
@@ -45,19 +49,10 @@ def create_asset(
         environment=asset.environment
     )
 
-    # Save asset into database
-    db.add(new_asset)
-
-    db.commit()
-
     return {
         "message": "Asset created"
     }
 
-
-from app.dependencies.security import (
-    get_current_user
-)
 
 @router.get("/assets")
 def get_assets(
@@ -66,7 +61,7 @@ def get_assets(
     ),
     db: Session = Depends(get_db)
 ):
-    return db.query(Asset).all()
+    return get_all_assets(db)
 
 
 
@@ -75,21 +70,20 @@ def get_assets(
 )
 def get_asset_vulnerabilities(
     asset_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
 ):
 
-    vulnerabilities = (
-        db.query(
-            Vulnerability
-        )
-        .filter(
-            Vulnerability.asset_id
-            == asset_id
-        )
-        .order_by(
-            Vulnerability.cvss_score.desc()
-        )
-        .all()
+    vulnerabilities = get_by_asset(
+        db,
+        asset_id,
+        order_by_cvss=True
     )
 
     results = []
@@ -126,16 +120,17 @@ def get_asset_vulnerabilities(
 )
 def get_asset_summary(
     asset_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
 ):
 
-    asset = (
-        db.query(Asset)
-        .filter(
-            Asset.id == asset_id
-        )
-        .first()
-    )
+    asset = get_asset(db, asset_id)
 
     if not asset:
 
@@ -143,16 +138,7 @@ def get_asset_summary(
             "message": "Asset not found"
         }
 
-    vulnerabilities = (
-        db.query(
-            Vulnerability
-        )
-        .filter(
-            Vulnerability.asset_id
-            == asset_id
-        )
-        .all()
-    )
+    vulnerabilities = get_by_asset(db, asset_id)
 
     summary = {
         "asset_id": asset.id,

@@ -5,3 +5,4 @@ from app.models.vulnerability import Vulnerability
 from app.models.control import Control
 from app.models.framework import Framework
 from app.models.category import Category
+from app.models.vulnerability_control_mapping import VulnerabilityControlMapping

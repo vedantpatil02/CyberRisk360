@@ -1,0 +1,8 @@
+{
+    "name": "CIS Critical Security Controls",
+    "short_name": "cis",
+    "version": "v8",
+    "publisher": "Center for Internet Security (CIS)",
+    "description": "A prioritized set of safeguards to mitigate the most prevalent cyber-attacks against systems and networks.",
+    "release_year": 2021
+}

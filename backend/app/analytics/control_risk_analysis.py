@@ -6,12 +6,14 @@ Calculate risk scores for
 compliance controls.
 """
 
-from app.models.control import Control
-from app.models.vulnerability import (
-    Vulnerability
+from app.repositories.controls.control_repository import (
+    get_controls_by_framework
 )
-from app.models.vulnerability_control_mapping import (
-    VulnerabilityControlMapping
+from app.repositories.vulnerability_control_mappings.mapping_repository import (
+    get_by_control
+)
+from app.repositories.vulnerabilities.vulnerability_repository import (
+    get_vulnerability
 )
 
 
@@ -24,29 +26,13 @@ def get_control_risk_analysis(
     controls within a framework.
     """
 
-    controls = (
-        db.query(Control)
-        .filter(
-            Control.framework
-            == framework_name
-        )
-        .all()
-    )
+    controls = get_controls_by_framework(db, framework_name)
 
     results = []
 
     for control in controls:
 
-        mappings = (
-            db.query(
-                VulnerabilityControlMapping
-            )
-            .filter(
-                VulnerabilityControlMapping.control_id
-                == control.id
-            )
-            .all()
-        )
+        mappings = get_by_control(db, control.id)
 
         critical = 0
         high = 0
@@ -55,14 +41,9 @@ def get_control_risk_analysis(
 
         for mapping in mappings:
 
-            vulnerability = (
-                db.query(Vulnerability)
-                .filter(
-                    Vulnerability.id
-                    ==
-                    mapping.vulnerability_id
-                )
-                .first()
+            vulnerability = get_vulnerability(
+                db,
+                mapping.vulnerability_id
             )
 
             if not vulnerability:
@@ -98,7 +79,7 @@ def get_control_risk_analysis(
                     control.control_id,
 
                 "name":
-                    control.name,
+                    control.title,
 
                 "affected_vulnerabilities":
                     len(mappings),

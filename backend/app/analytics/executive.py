@@ -6,9 +6,14 @@ Executive dashboard
 aggregating platform metrics.
 """
 
-from app.models.asset import Asset
-from app.models.vulnerability import (
-    Vulnerability
+from app.repositories.assets.asset_repository import (
+    get_all_assets
+)
+from app.repositories.vulnerabilities.vulnerability_repository import (
+    get_all_vulnerabilities
+)
+from app.repositories.controls.control_repository import (
+    get_all_controls
 )
 
 from app.analytics.asset_risk import (
@@ -18,8 +23,6 @@ from app.analytics.asset_risk import (
 from app.analytics.control_risk_analysis import (
     get_control_risk_analysis
 )
-
-from app.models.control import Control
 
 
 def get_executive_dashboard(
@@ -31,20 +34,11 @@ def get_executive_dashboard(
     compliance, and risk.
     """
 
-    assets = (
-        db.query(Asset)
-        .all()
-    )
+    assets = get_all_assets(db)
 
-    vulnerabilities = (
-        db.query(Vulnerability)
-        .all()
-    )
+    vulnerabilities = get_all_vulnerabilities(db)
 
-    controls = (
-        db.query(Control)
-        .all()
-    )
+    controls = get_all_controls(db)
 
     critical = 0
     high = 0

@@ -11,10 +11,6 @@ from fastapi import Depends
 
 from sqlalchemy.orm import Session
 
-from app.models.vulnerability import (
-    Vulnerability
-)
-
 from app.schemas.vulnerability import (
     VulnerabilityCreate
 )
@@ -35,7 +31,8 @@ from app.core.constants import (
     ROLE_ADMIN,
     ROLE_ANALYST,
     ROLE_AUDITOR,
-    VULNERABILITY_STATUS_OPEN
+    VULNERABILITY_STATUS_OPEN,
+    VULNERABILITY_STATUS_CLOSED
 )
 
 from app.schemas.vulnerability_update import (
@@ -58,9 +55,15 @@ from app.services.vulnerabilities.vulnerability_summary import (
     get_top_critical_vulnerabilities
 )
 
-from app.models.control import Control
-from app.models.vulnerability_control_mapping import (
-    VulnerabilityControlMapping
+from app.repositories.vulnerabilities.vulnerability_repository import (
+    get_all_vulnerabilities,
+    get_vulnerability as db_get_vulnerability,
+    create_vulnerability as db_create_vulnerability,
+    update_vulnerability as db_update_vulnerability
+)
+from app.repositories.controls.control_repository import (
+    search_controls_by_title,
+    get_controls_by_vulnerability
 )
 
 
@@ -82,13 +85,12 @@ def create_vulnerability(
     Create a vulnerability record.
     """
 
-    # Calculate severity from CVSS score
     severity = calculate_severity(
         vulnerability.cvss_score
     )
 
-    # Create database object
-    new_vulnerability = Vulnerability(
+    db_create_vulnerability(
+        db,
         title=vulnerability.title,
         description=vulnerability.description,
         asset_id=vulnerability.asset_id,
@@ -97,10 +99,6 @@ def create_vulnerability(
         severity=severity,
         owner=vulnerability.owner,
         status=VULNERABILITY_STATUS_OPEN
-    )
-
-    db.add(
-        new_vulnerability
     )
 
     db.commit()
@@ -126,9 +124,7 @@ def get_vulnerabilities(
     Retrieve all vulnerabilities.
     """
 
-    return db.query(
-        Vulnerability
-    ).all()
+    return get_all_vulnerabilities(db)
 
 @router.get(
     "/vulnerabilities/top-critical"
@@ -168,17 +164,7 @@ def get_vulnerability(
     Retrieve a specific vulnerability.
     """
 
-    vulnerability = (
-        db.query(
-            Vulnerability
-        )
-        .filter(
-            Vulnerability.id
-            ==
-            vulnerability_id
-        )
-        .first()
-    )
+    vulnerability = db_get_vulnerability(db, vulnerability_id)
 
     if not vulnerability:
 
@@ -207,17 +193,7 @@ def update_vulnerability(
     Update vulnerability.
     """
 
-    vulnerability = (
-        db.query(
-            Vulnerability
-        )
-        .filter(
-            Vulnerability.id
-            ==
-            vulnerability_id
-        )
-        .first()
-    )
+    vulnerability = db_get_vulnerability(db, vulnerability_id)
 
     if not vulnerability:
 
@@ -248,27 +224,19 @@ def update_vulnerability(
         )
     )
 
-    for field, value in update_data.items():
-
-        setattr(
-            vulnerability,
-            field,
-            value
-        )
-
     # Recalculate severity
     if (
         vulnerability_update.cvss_score
         is not None
     ):
 
-        vulnerability.severity = (
+        update_data["severity"] = (
             calculate_severity(
-                vulnerability.cvss_score
+                vulnerability_update.cvss_score
             )
         )
 
-    db.commit()
+    db_update_vulnerability(db, vulnerability, update_data)
 
     return {
         "message":
@@ -292,17 +260,7 @@ def close_vulnerability(
     Close vulnerability.
     """
 
-    vulnerability = (
-        db.query(
-            Vulnerability
-        )
-        .filter(
-            Vulnerability.id
-            ==
-            vulnerability_id
-        )
-        .first()
-    )
+    vulnerability = db_get_vulnerability(db, vulnerability_id)
 
     if not vulnerability:
 
@@ -311,11 +269,11 @@ def close_vulnerability(
             "Vulnerability not found"
         }
 
-    vulnerability.status = (
-        VULNERABILITY_STATUS_CLOSED
+    db_update_vulnerability(
+        db,
+        vulnerability,
+        {"status": VULNERABILITY_STATUS_CLOSED}
     )
-
-    db.commit()
 
     return {
         "message":
@@ -364,18 +322,7 @@ def get_suggested_controls(
     Recommended Controls
     """
 
-    # Retrieve vulnerability
-    vulnerability = (
-        db.query(
-            Vulnerability
-        )
-        .filter(
-            Vulnerability.id
-            ==
-            vulnerability_id
-        )
-        .first()
-    )
+    vulnerability = db_get_vulnerability(db, vulnerability_id)
 
     if not vulnerability:
 
@@ -396,15 +343,7 @@ def get_suggested_controls(
     # Search controls table
     for control_name in control_names:
 
-        controls = (
-            db.query(Control)
-            .filter(
-                Control.name.ilike(
-                    f"%{control_name}%"
-                )
-            )
-            .all()
-        )
+        controls = search_controls_by_title(db, control_name)
 
         for control in controls:
 
@@ -414,10 +353,10 @@ def get_suggested_controls(
                         control.control_id,
 
                     "name":
-                        control.name,
+                        control.title,
 
                     "framework":
-                        control.framework,
+                        control.category.framework.short_name,
 
                     "status":
                         control.status
@@ -438,24 +377,17 @@ def get_suggested_controls(
 )
 def get_vulnerability_controls(
     vulnerability_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
 ):
 
-    controls = (
-        db.query(
-            Control
-        )
-        .join(
-            VulnerabilityControlMapping,
-            VulnerabilityControlMapping.control_id
-            == Control.id
-        )
-        .filter(
-            VulnerabilityControlMapping.vulnerability_id
-            == vulnerability_id
-        )
-        .all()
-    )
+    controls = get_controls_by_vulnerability(db, vulnerability_id)
 
     results = []
 
@@ -467,10 +399,10 @@ def get_vulnerability_controls(
                     control.control_id,
 
                 "name":
-                    control.name,
+                    control.title,
 
                 "framework":
-                    control.framework,
+                    control.category.framework.short_name,
 
                 "status":
                     control.status

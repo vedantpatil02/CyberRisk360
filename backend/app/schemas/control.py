@@ -16,8 +16,8 @@ class ControlCreate(BaseModel):
 
     control_id: str
 
-    name: str
+    title: str
 
     description: str
 
-    framework: str
+    category_id: int

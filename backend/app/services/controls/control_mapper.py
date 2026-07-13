@@ -8,9 +8,12 @@ controls based on vulnerability
 characteristics.
 """
 
-from app.models.control import Control
-from app.models.vulnerability_control_mapping import (
-    VulnerabilityControlMapping
+from app.repositories.controls.control_repository import (
+    get_control_by_code
+)
+from app.repositories.vulnerability_control_mappings.mapping_repository import (
+    mapping_exists,
+    create_mapping
 )
 
 
@@ -91,43 +94,12 @@ def map_controls(
     # Create mappings
     for code in control_codes:
 
-        control = (
-            db.query(Control)
-            .filter(
-                Control.control_id
-                == code
-            )
-            .first()
-        )
+        control = get_control_by_code(db, code)
 
         if not control:
             continue
 
-        existing = (
-            db.query(
-                VulnerabilityControlMapping
-            )
-            .filter(
-                VulnerabilityControlMapping.vulnerability_id
-                == vulnerability.id,
-
-                VulnerabilityControlMapping.control_id
-                == control.id
-            )
-            .first()
-        )
-
-        if existing:
+        if mapping_exists(db, vulnerability.id, control.id):
             continue
 
-        mapping = (
-            VulnerabilityControlMapping(
-                vulnerability_id=
-                    vulnerability.id,
-
-                control_id=
-                    control.id
-            )
-        )
-
-        db.add(mapping)
+        create_mapping(db, vulnerability.id, control.id)

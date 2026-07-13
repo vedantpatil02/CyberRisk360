@@ -10,8 +10,6 @@ from fastapi import Depends
 
 from sqlalchemy.orm import Session
 
-from app.models.control import Control
-
 from app.schemas.control import ControlCreate
 
 from app.dependencies.database import get_db
@@ -24,9 +22,18 @@ from app.analytics.compliance import calculate_compliance_summary
 
 from app.schemas.control_update import ControlUpdate
 
-from app.models.vulnerability import Vulnerability
-from app.models.vulnerability_control_mapping import (
-    VulnerabilityControlMapping
+from app.repositories.controls.control_repository import (
+    get_all_controls,
+    get_control as db_get_control,
+    create_control as db_create_control,
+    update_control_status as db_update_control_status,
+    get_controls_by_framework
+)
+from app.repositories.vulnerabilities.vulnerability_repository import (
+    get_by_control
+)
+from app.repositories.vulnerability_control_mappings.mapping_repository import (
+    count_by_control
 )
 
 router = APIRouter()
@@ -46,19 +53,14 @@ def create_control(
     Create a compliance control.
     """
 
-    new_control = Control(
+    db_create_control(
+        db,
         control_id=control.control_id,
-        name=control.name,
+        title=control.title,
         description=control.description,
-        framework=control.framework,
+        category_id=control.category_id,
         status=CONTROL_STATUS_MISSING
     )
-
-    db.add(
-        new_control
-    )
-
-    db.commit()
 
     return {
         "message":
@@ -80,9 +82,7 @@ def get_controls(
     Retrieve all controls.
     """
 
-    return db.query(
-        Control
-    ).all()
+    return get_all_controls(db)
 
 @router.get(
     "/controls/{control_id}"
@@ -102,17 +102,7 @@ def get_control(
     Retrieve a specific control.
     """
 
-    control = (
-        db.query(
-            Control
-        )
-        .filter(
-            Control.id
-            ==
-            control_id
-        )
-        .first()
-    )
+    control = db_get_control(db, control_id)
 
     if not control:
 
@@ -141,10 +131,7 @@ def get_compliance_summary(
     statistics.
     """
 
-    controls = (
-        db.query(Control)
-        .all()
-    )
+    controls = get_all_controls(db)
 
     return (
         calculate_compliance_summary(
@@ -170,15 +157,7 @@ def update_control_status(
     Update control status.
     """
 
-    control = (
-        db.query(Control)
-        .filter(
-            Control.id
-            ==
-            control_id
-        )
-        .first()
-    )
+    control = db_get_control(db, control_id)
 
     if not control:
 
@@ -187,11 +166,11 @@ def update_control_status(
             "Control not found"
         }
 
-    control.status = (
+    db_update_control_status(
+        db,
+        control,
         control_update.status
     )
-
-    db.commit()
 
     return {
         "message":
@@ -203,20 +182,21 @@ def update_control_status(
 )
 def get_control_vulnerabilities(
     control_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
 ):
     """
     Return vulnerabilities mapped
     to a compliance control.
     """
 
-    control = (
-        db.query(Control)
-        .filter(
-            Control.id == control_id
-        )
-        .first()
-    )
+    control = db_get_control(db, control_id)
 
     if not control:
 
@@ -225,21 +205,7 @@ def get_control_vulnerabilities(
             "Control not found"
         }
 
-    vulnerabilities = (
-        db.query(
-            Vulnerability
-        )
-        .join(
-            VulnerabilityControlMapping,
-            VulnerabilityControlMapping.vulnerability_id
-            == Vulnerability.id
-        )
-        .filter(
-            VulnerabilityControlMapping.control_id
-            == control_id
-        )
-        .all()
-    )
+    vulnerabilities = get_by_control(db, control_id)
 
     results = []
 
@@ -272,10 +238,10 @@ def get_control_vulnerabilities(
             control.control_id,
 
         "control_name":
-            control.name,
+            control.title,
 
         "framework":
-            control.framework,
+            control.category.framework.short_name,
 
         "affected_vulnerabilities":
             len(vulnerabilities),
@@ -289,21 +255,21 @@ def get_control_vulnerabilities(
 )
 def get_framework_summary(
     framework_name: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
 ):
     """
     Return compliance summary
     for a framework.
     """
 
-    controls = (
-        db.query(Control)
-        .filter(
-            Control.framework
-            == framework_name
-        )
-        .all()
-    )
+    controls = get_controls_by_framework(db, framework_name)
 
     total_controls = len(
         controls
@@ -315,16 +281,7 @@ def get_framework_summary(
 
     for control in controls:
 
-        vulnerability_count = (
-            db.query(
-                VulnerabilityControlMapping
-            )
-            .filter(
-                VulnerabilityControlMapping.control_id
-                == control.id
-            )
-            .count()
-        )
+        vulnerability_count = count_by_control(db, control.id)
 
         if vulnerability_count > 0:
 

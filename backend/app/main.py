@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from app.db.database import engine
 from app.db.database import Base
 
-from app.models import User
 from app.api.auth import router as auth_router
 from app.api.users import router as user_router
 from app.api.assets import router as asset_router
@@ -13,10 +12,7 @@ from app.api.controls import router as control_router
 from app.api.frameworks import router as framework_router
 from app.api.imports import router as import_router
 from app.api.dashboard import (router as dashboard_router)
-from app.models.vulnerability_control_mapping import (
-    VulnerabilityControlMapping
-)
-
+import app.models
 
 Base.metadata.create_all(bind=engine)
 

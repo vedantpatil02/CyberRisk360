@@ -1,0 +1,8 @@
+{
+    "name": "NIST Cybersecurity Framework",
+    "short_name": "nist-csf",
+    "version": "2.0",
+    "publisher": "National Institute of Standards and Technology (NIST)",
+    "description": "A voluntary framework of standards, guidelines, and best practices to manage cybersecurity risk, organized around six core functions: Govern, Identify, Protect, Detect, Respond, and Recover.",
+    "release_year": 2024
+}

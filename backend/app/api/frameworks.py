@@ -75,9 +75,15 @@ def import_framework_controls(
         ]
     )
 
+    metadata = load_framework(
+        FRAMEWORK_METADATA_FILES[
+            framework_name
+        ]
+    )
+
     imported_count = (
         import_framework(
-            framework_name,
+            metadata,
             controls,
             db
         )
@@ -108,21 +114,6 @@ def search_framework_controls(
     """
     Search controls within a framework.
     """
-
-    FRAMEWORK_FILES = {
-        FRAMEWORK_OWASP_ASVS:
-            "frameworks/owasp_asvs.json",
-
-        FRAMEWORK_NIST_CSF:
-            "frameworks/nist_csf.json",
-
-        FRAMEWORK_ISO27001:
-            "frameworks/iso27001.json",
-
-        FRAMEWORK_CIS:
-            "frameworks/cis_controls.json"
-    }
-
 
     if framework_name not in FRAMEWORK_FILES:
 

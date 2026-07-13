@@ -343,43 +343,51 @@ The migration will be completed in phases.
 
 ### Phase 1
 
-Create Framework model.
+Create Framework model. **Status: Complete.**
 
 ---
 
 ### Phase 2
 
-Create Category model.
+Create Category model. **Status: Complete.**
 
 ---
 
 ### Phase 3
 
-Update Control model.
+Update Control model. **Status: Complete.**
 
 ---
 
 ### Phase 4
 
-Update framework loader.
+Update framework loader. **Status: Complete** (path resolution fixed to
+match the versioned `frameworks/<name>/<version>/` layout).
 
 ---
 
 ### Phase 5
 
-Update framework importer.
+Update framework importer. **Status: Complete** (resolves/creates
+`Framework` + `Category` from `metadata.json`, uses `title`/`category_id`).
 
 ---
 
 ### Phase 6
 
-Migrate existing framework data.
+Migrate existing framework data. **Status: Complete** for all four
+supported frameworks (NIST CSF, ISO 27001, CIS Controls, OWASP ASVS); all
+remaining `Control.framework`/`Control.name` references removed
+repository-wide (`api/`, `services/`, `analytics/`).
 
 ---
 
 ### Phase 7
 
-Refactor compliance dashboards.
+Refactor compliance dashboards. **Status: Complete** — `analytics/`
+(`grc.py`, `gap_analysis.py`, `control_risk_analysis.py`, `executive.py`,
+`asset_risk.py`) no longer queries the database directly; all access goes
+through the repository layer added alongside this migration.
 
 ---
 

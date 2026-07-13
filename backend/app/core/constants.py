@@ -5,6 +5,8 @@ Purpose:
 Application-wide constants.
 """
 
+from pathlib import Path
+
 # User Roles
 ROLE_ADMIN = "admin"
 ROLE_ANALYST = "analyst"
@@ -47,11 +49,25 @@ FRAMEWORK_NIST_CSF = "nist-csf"
 FRAMEWORK_OWASP_ASVS = "owasp-asvs"
 FRAMEWORK_CIS = "cis"
 
+# backend/app/core/constants.py -> backend/
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+FRAMEWORKS_DIR = BACKEND_DIR / "frameworks"
+
+FRAMEWORK_VERSION_DIRS = {
+    "owasp-asvs": FRAMEWORKS_DIR / "owasp-asvs" / "v4.0.3",
+    "nist-csf": FRAMEWORKS_DIR / "nist-csf" / "v2.0",
+    "iso27001": FRAMEWORKS_DIR / "iso27001" / "2022",
+    "cis": FRAMEWORKS_DIR / "cis-controls" / "v8",
+}
+
 FRAMEWORK_FILES = {
-    "owasp-asvs": "frameworks/owasp_asvs.json",
-    "nist-csf": "frameworks/nist_csf.json",
-    "iso27001": "frameworks/iso27001.json",
-    "cis": "frameworks/cis_controls.json"
+    key: str(path / "framework.json")
+    for key, path in FRAMEWORK_VERSION_DIRS.items()
+}
+
+FRAMEWORK_METADATA_FILES = {
+    key: str(path / "metadata.json")
+    for key, path in FRAMEWORK_VERSION_DIRS.items()
 }
 
 UPLOAD_DIR = "uploads"

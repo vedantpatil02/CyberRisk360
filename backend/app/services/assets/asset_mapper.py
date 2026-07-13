@@ -1,4 +1,7 @@
-from app.models.asset import Asset
+from app.repositories.assets.asset_repository import (
+    get_asset_by_ip,
+    create_asset
+)
 
 
 def get_or_create_asset(
@@ -6,18 +9,13 @@ def get_or_create_asset(
     ip_address
 ):
 
-    asset = (
-        db.query(Asset)
-        .filter(
-            Asset.ip_address == ip_address
-        )
-        .first()
-    )
+    asset = get_asset_by_ip(db, ip_address)
 
     if asset:
         return asset
 
-    asset = Asset(
+    return create_asset(
+        db,
         name=f"Host-{ip_address}",
         asset_type="Server",
         owner="Imported",
@@ -25,9 +23,3 @@ def get_or_create_asset(
         ip_address=ip_address,
         environment="Unknown"
     )
-
-    db.add(asset)
-    db.commit()
-    db.refresh(asset)
-
-    return asset
