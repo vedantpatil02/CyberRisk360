@@ -3,6 +3,15 @@ from sqlalchemy.orm import Session
 from app.models.category import Category
 
 
+def get_all_categories(
+    db: Session
+):
+    return (
+        db.query(Category)
+        .all()
+    )
+
+
 def get_categories_by_framework(
     db: Session,
     framework_id: int

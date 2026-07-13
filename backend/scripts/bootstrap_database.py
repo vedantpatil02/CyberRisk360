@@ -3,7 +3,8 @@ CyberRisk360
 
 Purpose:
 Bootstrap the database: create all tables and import every
-supported compliance framework from the frameworks/ repository.
+compliance framework found under frameworks/, discovered
+automatically rather than from a hardcoded list.
 
 Safe to run multiple times — table creation is a no-op if tables
 already exist, and framework/category/control import skips anything
@@ -26,11 +27,17 @@ os.chdir(BACKEND_DIR)
 from app.db.database import engine, Base, SessionLocal
 import app.models  # noqa: F401  (registers models with Base.metadata)
 
-from app.core.constants import FRAMEWORK_FILES, FRAMEWORK_METADATA_FILES
-from app.services.frameworks.framework_loader import load_framework
+from app.core.constants import FRAMEWORKS_DIR
+from app.services.frameworks.framework_loader import (
+    load_framework,
+    discover_frameworks
+)
 from app.services.frameworks.framework_importer import import_framework
 from app.repositories.frameworks.framework_repository import (
     get_all_frameworks
+)
+from app.repositories.categories.category_repository import (
+    get_all_categories
 )
 from app.repositories.controls.control_repository import get_all_controls
 
@@ -41,35 +48,36 @@ def create_tables():
     print("Tables ready.")
 
 
-def import_all_frameworks(db):
-    print("Importing compliance frameworks...")
+def import_all_frameworks(db, discovered):
+    print(f"Discovered {len(discovered)} framework(s) under {FRAMEWORKS_DIR}")
 
-    for framework_name in FRAMEWORK_FILES:
-        controls = load_framework(FRAMEWORK_FILES[framework_name])
-        metadata = load_framework(FRAMEWORK_METADATA_FILES[framework_name])
+    for short_name, paths in sorted(discovered.items()):
+        controls = load_framework(paths["framework_path"])
+        metadata = load_framework(paths["metadata_path"])
 
         imported_count = import_framework(metadata, controls, db)
 
         print(
-            f"  {framework_name}: {imported_count} new control(s) imported"
+            f"  {short_name} ({metadata.get('version')}): "
+            f"{imported_count} new control(s) imported"
         )
 
 
-def verify_import(db):
+def verify_import(db, discovered):
     frameworks = get_all_frameworks(db)
+    categories = get_all_categories(db)
     controls = get_all_controls(db)
 
-    print(
-        f"Verification: {len(frameworks)} framework(s), "
-        f"{len(controls)} control(s) in database."
-    )
+    print(f"✓ Frameworks Imported: {len(frameworks)}")
+    print(f"✓ Categories Imported: {len(categories)}")
+    print(f"✓ Controls Imported: {len(controls)}")
 
     imported_short_names = {
         framework.short_name for framework in frameworks
     }
 
     missing = [
-        name for name in FRAMEWORK_FILES
+        name for name in discovered
         if name not in imported_short_names
     ]
 
@@ -89,11 +97,13 @@ def verify_import(db):
 def main():
     create_tables()
 
+    discovered = discover_frameworks(FRAMEWORKS_DIR)
+
     db = SessionLocal()
 
     try:
-        import_all_frameworks(db)
-        verify_import(db)
+        import_all_frameworks(db, discovered)
+        verify_import(db, discovered)
     finally:
         db.close()
 

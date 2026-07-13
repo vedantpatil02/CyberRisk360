@@ -1,0 +1,8 @@
+{
+    "name": "OWASP Top 10",
+    "short_name": "owasp-top10",
+    "version": "2021",
+    "publisher": "OWASP Foundation",
+    "description": "A standard awareness document representing the most critical security risks to web applications, ranked by prevalence and impact.",
+    "release_year": 2021
+}

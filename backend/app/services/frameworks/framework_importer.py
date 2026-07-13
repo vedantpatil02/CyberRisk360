@@ -6,6 +6,8 @@ Import framework controls
 from JSON files.
 """
 
+import re
+
 from app.models.control import (
     Control
 )
@@ -26,6 +28,25 @@ from app.repositories.controls.control_repository import (
     get_control_by_code
 )
 
+# Matches everything before the final "." or "-" delimited segment
+# of a control_id, e.g. "PR.AC-3" -> "PR.AC", "A.5.1" -> "A.5".
+_CATEGORY_CODE_PATTERN = re.compile(r"^(.*)[.\-][^.\-]+$")
+
+
+def _derive_category_code(
+    control_id: str
+) -> str:
+    """
+    Best-effort, framework-agnostic category code derived from a
+    control_id's structure. Falls back to the full control_id when
+    it has no delimiter (e.g. "V5"), so the control still lands in
+    its own category rather than a catch-all bucket.
+    """
+
+    match = _CATEGORY_CODE_PATTERN.match(control_id)
+
+    return match.group(1) if match else control_id
+
 
 def import_framework(
     metadata: dict,
@@ -33,20 +54,14 @@ def import_framework(
     db
 ):
     """
-    Import a framework's metadata, a default
-    category, and its controls, skipping duplicates.
+    Import a framework's metadata and its controls, deriving
+    categories from each control_id's structure and skipping
+    controls that already exist.
     """
 
     framework = get_or_create_framework(
         db,
         metadata
-    )
-
-    category = get_or_create_category(
-        db,
-        framework.id,
-        "GENERAL",
-        "General Controls"
     )
 
     imported_count = 0
@@ -60,6 +75,17 @@ def import_framework(
 
         if existing_control:
             continue
+
+        category_code = _derive_category_code(
+            control["control_id"]
+        )
+
+        category = get_or_create_category(
+            db,
+            framework.id,
+            category_code,
+            category_code
+        )
 
         new_control = Control(
             control_id=control["control_id"],

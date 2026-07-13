@@ -1,0 +1,52 @@
+[
+    {
+        "control_id": "A01",
+        "name": "Broken Access Control",
+        "description": "Restrict access so authenticated users cannot act outside their intended permissions."
+    },
+    {
+        "control_id": "A02",
+        "name": "Cryptographic Failures",
+        "description": "Protect data in transit and at rest with strong, correctly implemented cryptography."
+    },
+    {
+        "control_id": "A03",
+        "name": "Injection",
+        "description": "Validate, sanitize, and parameterize untrusted input to prevent injection flaws."
+    },
+    {
+        "control_id": "A04",
+        "name": "Insecure Design",
+        "description": "Use secure design patterns and threat modeling to address risks before implementation."
+    },
+    {
+        "control_id": "A05",
+        "name": "Security Misconfiguration",
+        "description": "Harden and consistently review application, framework, and infrastructure configuration."
+    },
+    {
+        "control_id": "A06",
+        "name": "Vulnerable and Outdated Components",
+        "description": "Track, patch, and remove components with known vulnerabilities."
+    },
+    {
+        "control_id": "A07",
+        "name": "Identification and Authentication Failures",
+        "description": "Correctly implement authentication and session management to prevent identity compromise."
+    },
+    {
+        "control_id": "A08",
+        "name": "Software and Data Integrity Failures",
+        "description": "Verify the integrity of software updates, critical data, and CI/CD pipelines."
+    },
+    {
+        "control_id": "A09",
+        "name": "Security Logging and Monitoring Failures",
+        "description": "Log, monitor, and alert on security-relevant events to enable timely incident response."
+    },
+    {
+        "control_id": "A10",
+        "name": "Server-Side Request Forgery (SSRF)",
+        "description": "Validate and restrict server-initiated requests to prevent access to unintended resources."
+    }
+]

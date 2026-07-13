@@ -63,3 +63,38 @@ def get_or_create_framework(
     db.flush()
 
     return framework
+
+
+def create_framework(
+    db: Session,
+    **fields
+):
+    framework = Framework(**fields)
+
+    db.add(framework)
+    db.commit()
+    db.refresh(framework)
+
+    return framework
+
+
+def update_framework(
+    db: Session,
+    framework: Framework,
+    updates: dict
+):
+    for field, value in updates.items():
+        setattr(framework, field, value)
+
+    db.commit()
+    db.refresh(framework)
+
+    return framework
+
+
+def delete_framework(
+    db: Session,
+    framework: Framework
+):
+    db.delete(framework)
+    db.commit()
