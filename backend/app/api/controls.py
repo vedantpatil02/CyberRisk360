@@ -7,6 +7,7 @@ Manage compliance controls.
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
@@ -58,10 +59,10 @@ def create_control(
 
     if not get_category(db, control.category_id):
 
-        return {
-            "message":
-            "Category not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
 
     db_create_control(
         db,
@@ -116,10 +117,10 @@ def get_control(
 
     if not control:
 
-        return {
-            "message":
-            "Control not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Control not found"
+        )
 
     return control
 
@@ -171,10 +172,10 @@ def update_control_status(
 
     if not control:
 
-        return {
-            "message":
-            "Control not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Control not found"
+        )
 
     db_update_control_status(
         db,
@@ -210,10 +211,10 @@ def get_control_vulnerabilities(
 
     if not control:
 
-        return {
-            "message":
-            "Control not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Control not found"
+        )
 
     vulnerabilities = get_by_control(db, control_id)
 

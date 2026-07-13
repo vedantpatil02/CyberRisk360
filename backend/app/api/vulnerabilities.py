@@ -8,6 +8,7 @@ associate them with assets and risks.
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
@@ -95,24 +96,24 @@ def create_vulnerability(
         vulnerability.cvss_score
     ):
 
-        return {
-            "message":
-            "Invalid CVSS score"
-        }
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid CVSS score"
+        )
 
     if not get_asset(db, vulnerability.asset_id):
 
-        return {
-            "message":
-            "Asset not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
 
     if not get_risk(db, vulnerability.risk_id):
 
-        return {
-            "message":
-            "Risk not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Risk not found"
+        )
 
     severity = calculate_severity(
         vulnerability.cvss_score
@@ -197,10 +198,10 @@ def get_vulnerability(
 
     if not vulnerability:
 
-        return {
-            "message":
-            "Vulnerability not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
 
     return vulnerability
 
@@ -226,10 +227,10 @@ def update_vulnerability(
 
     if not vulnerability:
 
-        return {
-            "message":
-            "Vulnerability not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
 
     # Validate CVSS score
     if (
@@ -241,10 +242,10 @@ def update_vulnerability(
             vulnerability_update.cvss_score
         ):
 
-            return {
-                "message":
-                "Invalid CVSS score"
-            }
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid CVSS score"
+            )
 
     update_data = (
         vulnerability_update
@@ -293,10 +294,10 @@ def close_vulnerability(
 
     if not vulnerability:
 
-        return {
-            "message":
-            "Vulnerability not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
 
     db_update_vulnerability(
         db,
@@ -355,10 +356,10 @@ def get_suggested_controls(
 
     if not vulnerability:
 
-        return {
-            "message":
-            "Vulnerability not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
 
     # Get suggested control names
     control_names = (

@@ -48,8 +48,8 @@ def test_create_control_rejects_unknown_category_id(client):
         "category_id": 999999
     })
 
-    assert response.status_code == 200
-    assert response.json() == {"message": "Category not found"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Category not found"}
     assert client.get("/controls").json() == []
 
 
@@ -68,8 +68,8 @@ def test_create_control_with_bad_category_never_reaches_crash_path(client):
     response = client.get("/controls/1/vulnerabilities")
     # No control with id 1 was ever created, so this is a normal
     # "not found" - not a 500 from a dangling category reference.
-    assert response.status_code == 200
-    assert response.json() == {"message": "Control not found"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Control not found"}
 
 
 # --- risks -----------------------------------------------------------------
@@ -81,9 +81,10 @@ def test_create_risk_rejects_unknown_asset_id(client):
         "impact": 3, "likelihood": 3, "owner": "IT"
     })
 
-    assert response.status_code == 200
-    assert response.json() == {"message": "Asset not found"}
-    assert client.get("/risks/1").json() == {"message": "Risk not found"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Asset not found"}
+    assert client.get("/risks/1").status_code == 404
+    assert client.get("/risks/1").json() == {"detail": "Risk not found"}
 
 
 def test_create_risk_with_valid_asset_succeeds(client):
@@ -107,8 +108,8 @@ def test_create_vulnerability_rejects_unknown_asset_id(client):
         "risk_id": 999999, "cvss_score": 5.0, "owner": "IT"
     })
 
-    assert response.status_code == 200
-    assert response.json() == {"message": "Asset not found"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Asset not found"}
     assert client.get("/vulnerabilities").json() == []
 
 
@@ -120,8 +121,8 @@ def test_create_vulnerability_rejects_unknown_risk_id(client):
         "risk_id": 999999, "cvss_score": 5.0, "owner": "IT"
     })
 
-    assert response.status_code == 200
-    assert response.json() == {"message": "Risk not found"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Risk not found"}
     assert client.get("/vulnerabilities").json() == []
 
 
@@ -134,8 +135,8 @@ def test_create_vulnerability_rejects_out_of_range_cvss_score(client):
         "risk_id": risk_id, "cvss_score": 15.0, "owner": "IT"
     })
 
-    assert response.status_code == 200
-    assert response.json() == {"message": "Invalid CVSS score"}
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid CVSS score"}
     assert client.get("/vulnerabilities").json() == []
 
 

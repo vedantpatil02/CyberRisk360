@@ -13,17 +13,13 @@ VALID_ROLES = [ROLE_ADMIN, ROLE_ANALYST, ROLE_AUDITOR]
 
 def register_user(db, user):
     """
-    Validate and create a new user account.
-    Returns a result dict describing the outcome.
+    Create a new user account.
+
+    Assumes the caller (API layer) has already validated that the
+    email is unique and the role is valid - this just does the write.
     """
 
-    if get_by_email(db, user.email):
-        return {"message": "User already exists"}
-
-    if user.role not in VALID_ROLES:
-        return {"message": "Invalid role"}
-
-    create_user(
+    created_user = create_user(
         db,
         username=user.username,
         email=user.email,
@@ -31,7 +27,7 @@ def register_user(db, user):
         role=user.role
     )
 
-    return {"message": "User created successfully"}
+    return created_user
 
 
 def authenticate_user(db, email, password):

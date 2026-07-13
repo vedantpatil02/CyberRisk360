@@ -274,12 +274,15 @@ def search_framework_controls(
 
     if framework_name not in available_frameworks:
 
-        return {
-            "message": "Framework not found",
-            "available_frameworks": list(
-                available_frameworks.keys()
-            )
-        }
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "message": "Framework not found",
+                "available_frameworks": list(
+                    available_frameworks.keys()
+                )
+            }
+        )
 
     controls = load_framework(
         available_frameworks[

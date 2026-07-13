@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
@@ -47,9 +48,10 @@ def create_risk(
 
     if not get_asset(db, risk.asset_id):
 
-        return {
-            "message": "Asset not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
 
     score = calculate_risk_score(
         risk.impact,
@@ -98,9 +100,10 @@ def get_risk(
 
     if not risk:
 
-        return {
-            "message": "Risk not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Risk not found"
+        )
 
     return risk
 
@@ -125,9 +128,10 @@ def update_risk(
 
     if not risk:
 
-        return {
-            "message": "Risk not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Risk not found"
+        )
 
     update_data = risk_update.model_dump(
         exclude_unset=True
@@ -184,9 +188,10 @@ def close_risk(
 
     if not risk:
 
-        return {
-            "message": "Risk not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Risk not found"
+        )
 
     db_update_risk(
         db,

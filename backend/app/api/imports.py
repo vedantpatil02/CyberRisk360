@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import UploadFile
 from fastapi import File
+from fastapi import HTTPException
 
 import os
 import uuid
@@ -12,7 +13,8 @@ from app.dependencies.rbac import (
 
 from app.core.constants import (
     ROLE_ADMIN,
-    ROLE_ANALYST
+    ROLE_ANALYST,
+    UPLOAD_DIR
 )
 
 from app.services.imports.report_processor import (
@@ -53,8 +55,6 @@ def upload_report(
     """
 
     # print("UPLOAD REQUEST RECEIVED")
-
-    UPLOAD_DIR = "uploads"
 
     os.makedirs(
         UPLOAD_DIR,
@@ -116,14 +116,18 @@ def upload_report(
                 import_result
             )
 
-        except Exception as error:
+        except Exception:
 
             import traceback
 
+            # Full traceback stays server-side; the client only gets
+            # a generic message so internal details (paths, query
+            # text, etc.) aren't leaked.
             traceback.print_exc()
 
-            return {
-                "error": str(error)
-            }
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to process import findings"
+            )
 
     return result

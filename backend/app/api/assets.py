@@ -1,5 +1,6 @@
 from fastapi import Depends
 from fastapi import APIRouter
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.schemas.asset import AssetCreate
@@ -134,9 +135,10 @@ def get_asset_summary(
 
     if not asset:
 
-        return {
-            "message": "Asset not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
 
     vulnerabilities = get_by_asset(db, asset_id)
 
