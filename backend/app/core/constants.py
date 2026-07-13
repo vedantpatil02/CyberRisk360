@@ -68,4 +68,4 @@ MAPPING_STATUS_REJECTED = "rejected"
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 FRAMEWORKS_DIR = BACKEND_DIR / "frameworks"
 
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = BACKEND_DIR / "uploads"

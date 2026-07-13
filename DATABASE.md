@@ -1,9 +1,23 @@
 # CyberRisk360 Database Design Document
 
-**Version:** 1.0  
-**Database:** SQLite (Current) → PostgreSQL (Future)  
-**ORM:** SQLAlchemy  
-**Migration Tool:** Alembic (Planned)
+**Version:** 1.1
+**Database:** SQLite (zero-config local default) or PostgreSQL (via `DATABASE_URL`, used in Docker/production)
+**ORM:** SQLAlchemy
+**Migration Tool:** Alembic
+
+---
+
+## Implementation Status (as of July 2026)
+
+`DATABASE_URL` is environment-configured (`backend/app/db/database.py`), defaulting to a
+`BACKEND_DIR`-anchored SQLite file when unset. Alembic (`backend/alembic/`) is the sole
+schema authority — there is one hand-reviewed baseline migration covering all 9 tables;
+`Base.metadata.create_all()` is no longer called anywhere in the app or
+`scripts/bootstrap_database.py` (only `app/tests/conftest.py`'s isolated, ephemeral
+per-test SQLite engine still uses it, which is unrelated to Alembic). Foreign keys are
+enforced at the database level on both dialects: natively on PostgreSQL, and via a
+`PRAGMA foreign_keys=ON` connect-event hook on SQLite. `docker-compose.yml` (repo root)
+runs a PostgreSQL 18 container alongside the backend.
 
 ---
 
@@ -41,9 +55,9 @@ The database enables organizations to:
 | Item | Value |
 |------|-------|
 | ORM | SQLAlchemy |
-| Current Database | SQLite |
-| Future Database | PostgreSQL |
-| Migration Tool | Alembic (Planned) |
+| Local/dev database | SQLite (zero-config default) |
+| Docker/production database | PostgreSQL (set via `DATABASE_URL`) |
+| Migration Tool | Alembic |
 | Language | Python |
 | Design Pattern | Relational Database (Normalized) |
 

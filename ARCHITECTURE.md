@@ -571,14 +571,14 @@ Planned integrations include:
 
 ---
 
-# 17. Deployment Architecture (Future)
+# 17. Deployment Architecture
 
 ```
                 Internet
 
                      │
 
-              Reverse Proxy
+              Reverse Proxy (Future)
 
                      │
 
@@ -590,14 +590,21 @@ Planned integrations include:
 
                      │
 
-             Object Storage
+             Object Storage (Future)
 
                      │
 
-              Frontend (React)
+              Frontend (React) (Future)
 ```
 
-Future versions will support Docker and Kubernetes deployment.
+**Implemented (July 2026):** `docker-compose.yml` (repo root) runs a PostgreSQL container
+and the FastAPI backend container together; `backend/Dockerfile` builds the backend image
+(non-root user, migrations applied via `backend/docker-entrypoint.sh` before the app
+starts). `DATABASE_URL` is environment-configured, so the same backend image runs against
+SQLite (local/dev default) or PostgreSQL (Docker/production) without a code change.
+
+**Still future:** reverse proxy, object storage, Kubernetes deployment, and the React
+frontend.
 
 ---
 

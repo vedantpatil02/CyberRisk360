@@ -2,14 +2,17 @@
 CyberRisk360
 
 Purpose:
-Bootstrap the database: create all tables and import every
+Bootstrap the database: apply all Alembic migrations and import every
 compliance framework found under frameworks/, discovered
 automatically rather than from a hardcoded list.
 
-Safe to run multiple times — table creation is a no-op if tables
-already exist, and framework/category/control import skips anything
+Safe to run multiple times — `alembic upgrade head` is a no-op once
+already at head, and framework/category/control import skips anything
 already present (see get_or_create_framework, get_or_create_category,
-and get_control_by_code).
+and get_control_by_code). This is the single "get me a fully migrated,
+fully seeded database" command for both local dev and Docker (see
+backend/docker-entrypoint.sh, which calls this script before starting
+the app).
 
 Usage:
     python scripts/bootstrap_database.py
@@ -24,7 +27,10 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 os.chdir(BACKEND_DIR)
 
-from app.db.database import engine, Base, SessionLocal
+from alembic.config import Config
+from alembic import command
+
+from app.db.database import SessionLocal
 import app.models  # noqa: F401  (registers models with Base.metadata)
 
 from app.core.constants import FRAMEWORKS_DIR
@@ -43,9 +49,10 @@ from app.repositories.controls.control_repository import get_all_controls
 
 
 def create_tables():
-    print("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    print("Tables ready.")
+    print("Applying database migrations...")
+    alembic_cfg = Config(str(BACKEND_DIR / "alembic.ini"))
+    command.upgrade(alembic_cfg, "head")
+    print("Migrations applied.")
 
 
 def import_all_frameworks(db, discovered):

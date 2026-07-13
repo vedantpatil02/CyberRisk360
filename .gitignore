@@ -10,6 +10,7 @@ frontend/venv/
 # Database
 *.db
 *.db.bak
+*.db.pre-alembic-backup
 
 # Environment Variables
 .env

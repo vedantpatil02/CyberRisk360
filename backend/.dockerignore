@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+*.db
+*.db.bak
+*.db.pre-alembic-backup
+uploads/*
+.pytest_cache/
+.git
