@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.database import get_db
 from app.analytics.grc import get_grc_dashboard
 from app.dependencies.rbac import require_role
+from app.dependencies.tenancy import org_scope
 from app.core.constants import READ_ROLES
 from app.analytics.executive import (
     get_executive_dashboard
@@ -25,12 +26,13 @@ router = APIRouter()
     "/dashboard/overview"
 )
 def dashboard_overview(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    org_id=Depends(org_scope)
 ):
 
-    assets = count_assets(db)
+    assets = count_assets(db, org_id=org_id)
 
-    vulnerabilities = get_all_vulnerabilities(db)
+    vulnerabilities = get_all_vulnerabilities(db, org_id=org_id)
 
     summary = {
         "total_assets": assets,
@@ -61,7 +63,9 @@ def dashboard_overview(
         if status in summary:
             summary[status] += 1
 
-    top_assets = get_top_assets_by_vulnerability_count(db, limit=5)
+    top_assets = get_top_assets_by_vulnerability_count(
+        db, org_id=org_id, limit=5
+    )
 
     summary["top_assets"] = []
 
@@ -84,6 +88,7 @@ def dashboard_overview(
 def grc_dashboard(
     framework_name: str,
     db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
     current_user=Depends(
         require_role(*READ_ROLES)
     )
@@ -94,7 +99,8 @@ def grc_dashboard(
 
     return get_grc_dashboard(
         db,
-        framework_name
+        framework_name,
+        org_id=org_id
     )
 
 @router.get(
@@ -102,6 +108,7 @@ def grc_dashboard(
 )
 def executive_dashboard(
     db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
     current_user=Depends(
         require_role(*READ_ROLES)
     )
@@ -111,5 +118,6 @@ def executive_dashboard(
     """
 
     return get_executive_dashboard(
-        db
+        db,
+        org_id=org_id
     )

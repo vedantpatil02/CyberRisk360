@@ -48,10 +48,14 @@ def record_audit(
     entity_id=None,
     ip_address: str = None,
     detail: str = None,
+    org_id: int = None,
     commit: bool = True,
 ):
     """
     Append one entry to the audit trail.
+
+    `org_id` scopes the event to an organization; leave it None for
+    org-less events (unknown-email login failure, platform actions).
 
     `commit=True` (default) persists immediately - use for standalone
     events such as login attempts. `commit=False` lets the entry ride
@@ -67,6 +71,7 @@ def record_audit(
         entity_id=entity_id,
         ip_address=ip_address,
         detail=detail,
+        org_id=org_id,
     )
 
     if commit:

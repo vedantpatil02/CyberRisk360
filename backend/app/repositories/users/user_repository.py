@@ -34,13 +34,15 @@ def create_user(
     username: str,
     email: str,
     password: str,
-    role: str
+    role: str,
+    org_id: int
 ):
     user = User(
         username=username,
         email=email,
         password=password,
-        role=role
+        role=role,
+        org_id=org_id
     )
 
     db.add(user)

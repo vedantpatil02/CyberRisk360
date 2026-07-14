@@ -12,6 +12,7 @@ from app.schemas.risk import RiskCreate
 
 from app.dependencies.database import get_db
 from app.dependencies.rbac import require_role
+from app.dependencies.tenancy import org_scope, org_home
 from app.core.constants import *
 
 from app.services.risks.risk import calculate_risk_score, calculate_risk_level
@@ -44,6 +45,8 @@ router = APIRouter()
 def create_risk(
     risk: RiskCreate,
     db: Session = Depends(get_db),
+    org_id=Depends(org_home),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -58,7 +61,7 @@ def create_risk(
     can create risks.
     """
 
-    if not get_asset(db, risk.asset_id):
+    if not get_asset(db, risk.asset_id, org_id=scope):
 
         raise HTTPException(
             status_code=404,
@@ -83,7 +86,8 @@ def create_risk(
         likelihood=risk.likelihood,
         risk_score=score,
         risk_level=level,
-        owner=risk.owner
+        owner=risk.owner,
+        org_id=org_id
     )
 
     return {
@@ -97,6 +101,8 @@ def create_risk(
 def generate_risks(
     request: Request,
     db: Session = Depends(get_db),
+    org_id=Depends(org_home),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -113,7 +119,7 @@ def generate_risks(
     imported before auto-generation existed.
     """
 
-    assets = get_all_assets(db)
+    assets = get_all_assets(db, org_id=scope)
 
     generated = generate_risks_for_assets(db, assets)
 
@@ -124,6 +130,7 @@ def generate_risks(
         entity_type="risk",
         ip_address=client_ip(request),
         detail=f"assets_with_risk={generated}",
+        org_id=org_id,
     )
 
     return {
@@ -143,6 +150,7 @@ def get_risks(
     sort_by: str = Query("id"),
     order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -152,13 +160,14 @@ def get_risks(
     )
 ):
     """
-    List risks. Optional `risk_level`/`status`/`source`/`asset_id`
-    filters, `sort_by` + `order`, and `limit`/`offset` pagination. With
-    no parameters, returns all risks.
+    List risks (scoped to the caller's organization). Optional
+    `risk_level`/`status`/`source`/`asset_id` filters, `sort_by` +
+    `order`, and `limit`/`offset` pagination.
     """
 
     return db_query_risks(
         db,
+        org_id=scope,
         limit=limit,
         offset=offset,
         risk_level=risk_level,
@@ -173,6 +182,7 @@ def get_risks(
 def get_risk(
     risk_id: int,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -185,7 +195,7 @@ def get_risk(
     Retrieve a specific risk.
     """
 
-    risk = db_get_risk(db, risk_id)
+    risk = db_get_risk(db, risk_id, org_id=scope)
 
     if not risk:
 
@@ -202,6 +212,7 @@ def update_risk(
     risk_id: int,
     risk_update: RiskUpdate,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -213,7 +224,7 @@ def update_risk(
     Update an existing risk.
     """
 
-    risk = db_get_risk(db, risk_id)
+    risk = db_get_risk(db, risk_id, org_id=scope)
 
     if not risk:
 
@@ -262,6 +273,7 @@ def update_risk(
 def close_risk(
     risk_id: int,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -273,7 +285,7 @@ def close_risk(
     Close an existing risk.
     """
 
-    risk = db_get_risk(db, risk_id)
+    risk = db_get_risk(db, risk_id, org_id=scope)
 
     if not risk:
 
@@ -295,6 +307,7 @@ def close_risk(
 @router.get("/risk-summary")
 def get_risk_summary(
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -308,7 +321,7 @@ def get_risk_summary(
     for all risks.
     """
 
-    risks = db_get_all_risks(db)
+    risks = db_get_all_risks(db, org_id=scope)
 
     summary = initialize_summary()
 

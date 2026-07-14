@@ -22,6 +22,8 @@ from app.dependencies.rbac import (
     require_role
 )
 
+from app.dependencies.tenancy import org_scope
+
 from app.core.constants import (
     ROLE_ADMIN,
     ROLE_ANALYST,
@@ -54,6 +56,7 @@ router = APIRouter()
 )
 def get_pending_mappings(
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -66,7 +69,7 @@ def get_pending_mappings(
     List mappings awaiting manual approval.
     """
 
-    return list_pending_mappings(db)
+    return list_pending_mappings(db, org_id=scope)
 
 
 @router.get(
@@ -119,6 +122,7 @@ def approve_mapping(
     request: Request,
     review: MappingReview = MappingReview(),
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -135,7 +139,8 @@ def approve_mapping(
         mapping_id,
         approve=True,
         reviewer=current_user.get("sub"),
-        note=review.note
+        note=review.note,
+        org_id=scope
     )
 
     if not mapping:
@@ -151,6 +156,7 @@ def approve_mapping(
         entity_type="mapping",
         entity_id=mapping_id,
         ip_address=client_ip(request),
+        org_id=mapping.org_id,
     )
 
     # The audit commit expires `mapping`; reload it so the response
@@ -168,6 +174,7 @@ def reject_mapping(
     request: Request,
     review: MappingReview = MappingReview(),
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -184,7 +191,8 @@ def reject_mapping(
         mapping_id,
         approve=False,
         reviewer=current_user.get("sub"),
-        note=review.note
+        note=review.note,
+        org_id=scope
     )
 
     if not mapping:
@@ -200,6 +208,7 @@ def reject_mapping(
         entity_type="mapping",
         entity_id=mapping_id,
         ip_address=client_ip(request),
+        org_id=mapping.org_id,
     )
 
     # The audit commit expires `mapping`; reload it so the response

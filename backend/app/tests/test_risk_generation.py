@@ -24,6 +24,9 @@ from app.services.risks.risk_generation import generate_risk_for_asset
 FIXTURE_CSV = Path(__file__).parent / "fixtures" / "sample_report.csv"
 
 
+ORG = 1
+
+
 def _asset(db, criticality="Medium", owner="Imported", ip="10.0.0.1"):
     return create_asset(
         db,
@@ -33,6 +36,7 @@ def _asset(db, criticality="Medium", owner="Imported", ip="10.0.0.1"):
         criticality=criticality,
         ip_address=ip,
         environment="prod",
+        org_id=ORG,
     )
 
 
@@ -50,6 +54,7 @@ def _vuln(db, asset_id, severity="High", cvss=7.5):
         severity=severity,
         owner="Imported",
         status="Open",
+        org_id=ORG,
     )
     db.commit()
     return v
@@ -119,6 +124,7 @@ def test_manual_risk_is_not_touched(client, db_session):
         risk_level="Low",
         owner="Alice",
         source="manual",
+        org_id=ORG,
     )
 
     generate_risk_for_asset(db_session, asset)

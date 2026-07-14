@@ -61,14 +61,22 @@ lack. User identity is currently minimal. Low schema risk.
   Redis to build against
 - ⬜ Basic metrics endpoint (Prometheus-style)
 
-## Phase 4 — Multi-tenancy ⬜
+## Phase 4 — Multi-tenancy ✅
 
 **Why later:** Highest-effort change (touches every model and query), so
-sequenced after the foundations are stable — but the schema decision is
-acknowledged now.
+sequenced after the foundations are stable.
 
-- ⬜ `Organization` model; `org_id` FK on every domain table
-- ⬜ Row-level org scoping in repositories; org-aware RBAC
+- ✅ `Organization` model; `org_id` FK on every per-org table (users,
+  assets, vulnerabilities, risks, mappings, mapping history, audit
+  logs). Frameworks/controls/plugin cache stay shared reference data.
+- ✅ Row-level org scoping across repositories, services, analytics,
+  dashboards, and reports (`app/dependencies/tenancy.py`, `org_id` JWT
+  claim); org-aware admin actions
+- ✅ Platform super-admin spanning all orgs + org management API
+- ✅ Migration with default-org backfill (verified fwd/reverse); 149 →
+  156 tests incl. cross-org isolation
+- ⬜ Follow-ups: per-org control implementation status (join table);
+  a bootstrap flow for the first super-admin
 
 ## Phase 5 — Workflow, integrations, enrichment ⬜
 
@@ -87,5 +95,6 @@ acknowledged now.
 
 ---
 
-**Current focus:** Phases 1 & 2 complete; Phase 3 largely done
+**Current focus:** Phases 1, 2 & 4 complete; Phase 3 largely done
 (remaining: object storage + Redis, both blocked on external infra).
+Next: Phase 5 (workflow/integrations) or Phase 6 (frontend).

@@ -18,11 +18,12 @@ from app.core.constants import (
 
 def get_framework_gaps(
     db,
-    framework_name: str
+    framework_name: str,
+    org_id=None
 ):
     """
-    Return affected and
-    unaffected controls.
+    Return affected and unaffected controls for the organization scope.
+    Control coverage is judged by that org's approved mappings.
     """
 
     controls = get_controls_by_framework(db, framework_name)
@@ -35,7 +36,7 @@ def get_framework_gaps(
         # Only approved mappings count as coverage - a pending,
         # unreviewed match shouldn't make a control look addressed.
         mapping_count = count_by_control(
-            db, control.id, status=MAPPING_STATUS_APPROVED
+            db, control.id, status=MAPPING_STATUS_APPROVED, org_id=org_id
         )
 
         control_data = {

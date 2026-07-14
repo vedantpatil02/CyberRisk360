@@ -22,7 +22,7 @@ def test_overview_empty(client):
 def test_overview_with_data(client, seed_asset, db_session):
     db_session.add(Vulnerability(
         title="v1", description="d", asset_id=seed_asset,
-        cvss_score=9.5, severity="Critical", status="Open"
+        cvss_score=9.5, severity="Critical", status="Open", org_id=1
     ))
     db_session.commit()
 
@@ -54,7 +54,7 @@ def test_executive_dashboard(client, seed_asset, db_session):
 
     db_session.add(Vulnerability(
         title="v1", description="d", asset_id=seed_asset,
-        cvss_score=9.5, severity="Critical", status="Open"
+        cvss_score=9.5, severity="Critical", status="Open", org_id=1
     ))
     db_session.commit()
 

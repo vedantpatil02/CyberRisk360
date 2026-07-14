@@ -58,10 +58,14 @@ def override_get_db():
         db.close()
 
 
+DEFAULT_TEST_ORG_ID = 1
+
+
 def override_get_current_user():
     return {
         "sub": "test@example.com",
-        "role": ROLE_ADMIN
+        "role": ROLE_ADMIN,
+        "org_id": DEFAULT_TEST_ORG_ID
     }
 
 
@@ -74,6 +78,19 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     session = TestingSessionLocal()
+
+    # Seed the default organization every per-org row (and the override
+    # user's org_id) points at, with slug "default" so open registration
+    # resolves it.
+    from app.models.organization import Organization
+    session.add(
+        Organization(
+            id=DEFAULT_TEST_ORG_ID,
+            name="Test Organization",
+            slug="default",
+        )
+    )
+    session.commit()
 
     try:
         yield session
@@ -100,7 +117,28 @@ def as_role():
     def _set(role):
         app.dependency_overrides[get_current_user] = lambda: {
             "sub": "test@example.com",
-            "role": role
+            "role": role,
+            "org_id": DEFAULT_TEST_ORG_ID
+        }
+
+    yield _set
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+
+@pytest.fixture()
+def as_user():
+    """
+    Override the authenticated user with a specific role AND org_id -
+    the way to exercise cross-organization isolation (a user in org 2
+    must not see org 1's data).
+    """
+
+    def _set(role=ROLE_ADMIN, org_id=DEFAULT_TEST_ORG_ID, sub="user@example.com"):
+        app.dependency_overrides[get_current_user] = lambda: {
+            "sub": sub,
+            "role": role,
+            "org_id": org_id,
         }
 
     yield _set

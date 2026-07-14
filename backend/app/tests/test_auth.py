@@ -23,7 +23,9 @@ def test_me_returns_overridden_user(client):
     response = client.get("/me")
 
     assert response.status_code == 200
-    assert response.json() == {"sub": "test@example.com", "role": "admin"}
+    assert response.json() == {
+        "sub": "test@example.com", "role": "admin", "org_id": 1
+    }
 
 
 def test_register_and_login_happy_path(client):

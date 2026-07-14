@@ -22,11 +22,12 @@ from app.core.constants import (
 
 def get_control_risk_analysis(
     db,
-    framework_name: str
+    framework_name: str,
+    org_id=None
 ):
     """
-    Return risk scores for
-    controls within a framework.
+    Return risk scores for controls within a framework, using the
+    organization's mappings (`org_id=None` = all orgs).
     """
 
     controls = get_controls_by_framework(db, framework_name)
@@ -38,7 +39,7 @@ def get_control_risk_analysis(
         # Only approved mappings feed the risk score - an unreviewed
         # match shouldn't inflate a control's calculated risk.
         mappings = get_by_control(
-            db, control.id, status=MAPPING_STATUS_APPROVED
+            db, control.id, status=MAPPING_STATUS_APPROVED, org_id=org_id
         )
 
         critical = 0

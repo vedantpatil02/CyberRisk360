@@ -202,6 +202,7 @@ def map_vulnerability_to_controls(db, vulnerability, rules=None):
             db,
             vulnerability_id=vulnerability.id,
             control_id=control.id,
+            org_id=vulnerability.org_id,
             match_type=match_type,
             matched_value=matched_value,
             confidence_score=MAPPING_CONFIDENCE_BY_MATCH_TYPE[match_type],
@@ -213,6 +214,7 @@ def map_vulnerability_to_controls(db, vulnerability, rules=None):
             mapping_id=mapping.id,
             action="created",
             new_status=MAPPING_STATUS_PENDING,
+            org_id=vulnerability.org_id,
             actor="system",
             note=f"{match_type} match on {matched_value}"
         )

@@ -33,9 +33,11 @@ class FrameworkNotFound(Exception):
     """
 
 
-def build_compliance_report(db, framework_name: str, generated_by=None):
+def build_compliance_report(db, framework_name: str, generated_by=None, org_id=None):
     """
-    Build the structured Compliance Assessment report for one framework.
+    Build the structured Compliance Assessment report for one framework,
+    scoped to `org_id` (None = all orgs). Gap and control-risk views use
+    the org's mappings; control implementation status is global.
     """
 
     framework = get_framework_by_short_name(db, framework_name)
@@ -46,8 +48,8 @@ def build_compliance_report(db, framework_name: str, generated_by=None):
     controls = get_controls_by_framework(db, framework_name)
 
     summary = calculate_compliance_summary(controls)
-    gaps = get_framework_gaps(db, framework_name)
-    risk_analysis = get_control_risk_analysis(db, framework_name)
+    gaps = get_framework_gaps(db, framework_name, org_id=org_id)
+    risk_analysis = get_control_risk_analysis(db, framework_name, org_id=org_id)
 
     report = build_envelope(
         report_type="Compliance Assessment Report",

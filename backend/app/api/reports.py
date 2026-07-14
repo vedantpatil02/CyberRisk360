@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies.database import get_db
 from app.dependencies.rbac import require_role
+from app.dependencies.tenancy import org_scope
 from app.core.constants import READ_ROLES
 
 from app.schemas.report import ReportFormat
@@ -80,6 +81,7 @@ def _serialize(report: dict, report_format: ReportFormat):
 def executive_report(
     format: ReportFormat = ReportFormat.JSON,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(*READ_ROLES)
     )
@@ -90,7 +92,7 @@ def executive_report(
     """
 
     report = build_executive_report(
-        db, generated_by=current_user.get("sub")
+        db, generated_by=current_user.get("sub"), org_id=scope
     )
 
     return _serialize(report, format)
@@ -100,6 +102,7 @@ def executive_report(
 def technical_report(
     format: ReportFormat = ReportFormat.JSON,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(*READ_ROLES)
     )
@@ -109,7 +112,7 @@ def technical_report(
     """
 
     report = build_technical_report(
-        db, generated_by=current_user.get("sub")
+        db, generated_by=current_user.get("sub"), org_id=scope
     )
 
     return _serialize(report, format)
@@ -120,6 +123,7 @@ def compliance_report(
     framework_name: str,
     format: ReportFormat = ReportFormat.JSON,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(*READ_ROLES)
     )
@@ -132,7 +136,8 @@ def compliance_report(
         report = build_compliance_report(
             db,
             framework_name,
-            generated_by=current_user.get("sub")
+            generated_by=current_user.get("sub"),
+            org_id=scope
         )
 
     except FrameworkNotFound:

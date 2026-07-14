@@ -66,6 +66,13 @@ class MappingHistory(Base):
         server_default=func.now()
     )
 
+    org_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True
+    )
+
     mapping = relationship(
         "VulnerabilityControlMapping",
         back_populates="history"

@@ -16,20 +16,21 @@ from app.repositories.vulnerabilities.vulnerability_repository import (
 
 
 def get_asset_risk_summary(
-    db
+    db,
+    org_id=None
 ):
     """
-    Return risk summary
-    for all assets.
+    Return risk summary for all assets in the organization scope
+    (`org_id=None` = all orgs, for a super-admin).
     """
 
-    assets = get_all_assets(db)
+    assets = get_all_assets(db, org_id=org_id)
 
     results = []
 
     for asset in assets:
 
-        vulnerabilities = get_by_asset(db, asset.id)
+        vulnerabilities = get_by_asset(db, asset.id, org_id=org_id)
 
         critical = 0
         high = 0

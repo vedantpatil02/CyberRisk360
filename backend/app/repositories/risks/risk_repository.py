@@ -12,17 +12,30 @@ RISK_SORT_COLUMNS = {
 }
 
 
+def _scope(query, org_id):
+    """
+    Restrict a query to one organization. `org_id=None` = no restriction.
+    """
+
+    if org_id is not None:
+        query = query.filter(Risk.org_id == org_id)
+
+    return query
+
+
 def get_all_risks(
-    db: Session
+    db: Session,
+    org_id: int = None
 ):
     return (
-        db.query(Risk)
+        _scope(db.query(Risk), org_id)
         .all()
     )
 
 
 def query_risks(
     db: Session,
+    org_id: int = None,
     limit: int = None,
     offset: int = 0,
     risk_level: str = None,
@@ -33,11 +46,11 @@ def query_risks(
     order: str = "asc",
 ):
     """
-    List risks with optional filtering, sorting, and pagination. With no
-    arguments this returns every row.
+    List risks with optional filtering, sorting, and pagination, scoped
+    to `org_id` (None = all orgs).
     """
 
-    query = db.query(Risk)
+    query = _scope(db.query(Risk), org_id)
 
     if risk_level is not None:
         query = query.filter(
@@ -71,12 +84,13 @@ def query_risks(
 
 def get_risk(
     db: Session,
-    risk_id: int
+    risk_id: int,
+    org_id: int = None
 ):
     return (
-        db.query(Risk)
-        .filter(
-            Risk.id == risk_id
+        _scope(
+            db.query(Risk).filter(Risk.id == risk_id),
+            org_id
         )
         .first()
     )
@@ -84,7 +98,8 @@ def get_risk(
 
 def get_auto_risk_by_asset(
     db: Session,
-    asset_id: int
+    asset_id: int,
+    org_id: int = None
 ):
     """
     Return the engine-generated ("auto") risk for an asset, if any.
@@ -92,10 +107,12 @@ def get_auto_risk_by_asset(
     """
 
     return (
-        db.query(Risk)
-        .filter(
-            Risk.asset_id == asset_id,
-            Risk.source == "auto"
+        _scope(
+            db.query(Risk).filter(
+                Risk.asset_id == asset_id,
+                Risk.source == "auto"
+            ),
+            org_id
         )
         .first()
     )

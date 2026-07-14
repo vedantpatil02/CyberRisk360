@@ -70,6 +70,7 @@ def login(
             entity_id=(user.id if user else None),
             ip_address=client_ip(request),
             detail=f"reason={error}",
+            org_id=(user.org_id if user else None),
         )
 
         if error == LOGIN_LOCKED:
@@ -97,12 +98,14 @@ def login(
         entity_type="user",
         entity_id=user.id,
         ip_address=client_ip(request),
+        org_id=user.org_id,
     )
 
     token = create_access_token(
         {
             "sub": user.email,
-            "role": user.role
+            "role": user.role,
+            "org_id": user.org_id
         }
     )
 

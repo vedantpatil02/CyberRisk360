@@ -6,10 +6,15 @@ from app.repositories.assets.asset_repository import (
 
 def get_or_create_asset(
     db,
-    ip_address
+    ip_address,
+    org_id
 ):
+    """
+    Find (or create) the asset for an IP within one organization. The
+    same IP in two different orgs is two distinct assets.
+    """
 
-    asset = get_asset_by_ip(db, ip_address)
+    asset = get_asset_by_ip(db, ip_address, org_id=org_id)
 
     if asset:
         return asset
@@ -21,5 +26,6 @@ def get_or_create_asset(
         owner="Imported",
         criticality="Medium",
         ip_address=ip_address,
-        environment="Unknown"
+        environment="Unknown",
+        org_id=org_id
     )

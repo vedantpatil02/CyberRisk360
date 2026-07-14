@@ -62,6 +62,20 @@ def run_migrations_online() -> None:
     """
 
     with engine.connect() as connection:
+
+        # The app engine enables SQLite FK enforcement on every
+        # connection. That breaks batch migrations, which recreate a
+        # table by dropping the original - if another table references
+        # it by FK, the DROP is rejected. Disable enforcement for the
+        # migration run (issued on the raw DBAPI connection, before any
+        # transaction, so the PRAGMA actually takes effect). It is
+        # restored automatically on the next (app) connection.
+        if connection.dialect.name == "sqlite":
+            raw_connection = connection.connection
+            cursor = raw_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=OFF")
+            cursor.close()
+
         context.configure(
             connection=connection, target_metadata=target_metadata
         )

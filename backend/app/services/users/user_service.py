@@ -24,12 +24,13 @@ LOGIN_LOCKED = "locked"
 LOGIN_INACTIVE = "inactive"
 
 
-def register_user(db, user):
+def register_user(db, user, org_id):
     """
-    Create a new user account.
+    Create a new user account in an organization.
 
     Assumes the caller (API layer) has already validated that the
-    email is unique and the role is valid - this just does the write.
+    email is unique, the role is valid, and the org exists - this just
+    does the write.
     """
 
     created_user = create_user(
@@ -37,7 +38,8 @@ def register_user(db, user):
         username=user.username,
         email=user.email,
         password=hash_password(user.password),
-        role=user.role
+        role=user.role,
+        org_id=org_id
     )
 
     return created_user

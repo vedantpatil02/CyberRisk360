@@ -16,6 +16,7 @@ from app.schemas.control import ControlCreate
 from app.dependencies.database import get_db
 
 from app.dependencies.rbac import require_role
+from app.dependencies.tenancy import org_scope
 
 from app.core.constants import ROLE_ADMIN, ROLE_ANALYST, ROLE_AUDITOR, CONTROL_STATUS_MISSING, MAPPING_STATUS_APPROVED
 
@@ -194,6 +195,7 @@ def update_control_status(
 def get_control_vulnerabilities(
     control_id: int,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -216,7 +218,7 @@ def get_control_vulnerabilities(
             detail="Control not found"
         )
 
-    vulnerabilities = get_by_control(db, control_id)
+    vulnerabilities = get_by_control(db, control_id, org_id=scope)
 
     results = []
 
@@ -267,6 +269,7 @@ def get_control_vulnerabilities(
 def get_framework_summary(
     framework_name: str,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -302,7 +305,7 @@ def get_framework_summary(
         # Only approved mappings count toward compliance - a
         # pending, unreviewed match shouldn't move the score.
         vulnerability_count = count_by_control(
-            db, control.id, status=MAPPING_STATUS_APPROVED
+            db, control.id, status=MAPPING_STATUS_APPROVED, org_id=scope
         )
 
         if vulnerability_count > 0:

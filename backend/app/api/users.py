@@ -8,8 +8,12 @@ from app.schemas.user import UserCreate, PasswordChange, PasswordReset
 from app.dependencies.database import get_db
 from app.dependencies.rbac import require_role
 from app.dependencies.security import get_current_user
+from app.dependencies.tenancy import is_super_admin
 from app.core.constants import ROLE_ADMIN
 from app.repositories.users.user_repository import get_by_email, get_by_id
+from app.repositories.organizations.organization_repository import (
+    get_organization_by_slug
+)
 from app.services.security.security import verify_password
 from app.services.users.user_service import (
     register_user as register_user_account,
@@ -17,6 +21,30 @@ from app.services.users.user_service import (
     set_active,
     VALID_ROLES
 )
+
+DEFAULT_ORG_SLUG = "default"
+
+
+def _get_managed_user(db, user_id, current_user):
+    """
+    Fetch a target user for an admin action, enforcing tenant isolation:
+    an org admin can only act on users in their own org; a super-admin
+    can act on any. A cross-org target is reported as 404 (not 403) so
+    the endpoint doesn't confirm the user exists in another org.
+    """
+
+    user = get_by_id(db, user_id)
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if (
+        not is_super_admin(current_user)
+        and user.org_id != current_user.get("org_id")
+    ):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
 from app.services.audit.audit import (
     record_audit,
     client_ip,
@@ -53,7 +81,18 @@ def register_user(
             detail="Invalid role"
         )
 
-    created = register_user_account(db, user)
+    organization = get_organization_by_slug(
+        db, user.org_slug or DEFAULT_ORG_SLUG
+    )
+
+    if organization is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Organization not found"
+        )
+
+    created = register_user_account(db, user, organization.id)
 
     record_audit(
         db,
@@ -63,6 +102,7 @@ def register_user(
         entity_id=created.id,
         ip_address=client_ip(request),
         detail=f"role={created.role}",
+        org_id=organization.id,
     )
 
     return {
@@ -102,6 +142,7 @@ def change_own_password(
         entity_type="user",
         entity_id=user.id,
         ip_address=client_ip(request),
+        org_id=user.org_id,
     )
 
     return {"message": "Password changed"}
@@ -121,10 +162,7 @@ def admin_reset_password(
     see ROADMAP.md Phase 5.)
     """
 
-    user = get_by_id(db, user_id)
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = _get_managed_user(db, user_id, current_user)
 
     change_user_password(db, user, payload.new_password)
 
@@ -135,6 +173,7 @@ def admin_reset_password(
         entity_type="user",
         entity_id=user.id,
         ip_address=client_ip(request),
+        org_id=user.org_id,
     )
 
     return {"message": "Password reset"}
@@ -152,10 +191,7 @@ def deactivate_user(
     retain their history and audit trail.
     """
 
-    user = get_by_id(db, user_id)
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = _get_managed_user(db, user_id, current_user)
 
     set_active(db, user, False)
 
@@ -166,6 +202,7 @@ def deactivate_user(
         entity_type="user",
         entity_id=user.id,
         ip_address=client_ip(request),
+        org_id=user.org_id,
     )
 
     return {"message": "User deactivated"}
@@ -182,10 +219,7 @@ def activate_user(
     Re-enable a disabled account and clear any lockout state.
     """
 
-    user = get_by_id(db, user_id)
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = _get_managed_user(db, user_id, current_user)
 
     set_active(db, user, True)
 
@@ -196,6 +230,7 @@ def activate_user(
         entity_type="user",
         entity_id=user.id,
         ip_address=client_ip(request),
+        org_id=user.org_id,
     )
 
     return {"message": "User activated"}

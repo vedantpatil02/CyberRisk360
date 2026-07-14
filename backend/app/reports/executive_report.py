@@ -45,19 +45,20 @@ TOP_ASSETS = 5
 TOP_CONTROLS = 5
 
 
-def build_executive_report(db, generated_by=None):
+def build_executive_report(db, generated_by=None, org_id=None):
     """
-    Build the structured Executive Summary report.
+    Build the structured Executive Summary report, scoped to `org_id`
+    (None = all orgs, for a super-admin).
     """
 
-    assets = get_all_assets(db)
-    vulnerabilities = get_all_vulnerabilities(db)
+    assets = get_all_assets(db, org_id=org_id)
+    vulnerabilities = get_all_vulnerabilities(db, org_id=org_id)
     controls = get_all_controls(db)
 
     severity = severity_breakdown(vulnerabilities)
     status = status_breakdown(vulnerabilities)
 
-    asset_risks = get_asset_risk_summary(db)
+    asset_risks = get_asset_risk_summary(db, org_id=org_id)
     top_assets = asset_risks[:TOP_ASSETS]
 
     frameworks = get_all_frameworks(db)
@@ -86,7 +87,7 @@ def build_executive_report(db, generated_by=None):
         )
 
         risk_analysis = get_control_risk_analysis(
-            db, framework.short_name
+            db, framework.short_name, org_id=org_id
         )
 
         for control in risk_analysis["controls"]:

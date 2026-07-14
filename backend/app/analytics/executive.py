@@ -26,17 +26,17 @@ from app.analytics.control_risk_analysis import (
 
 
 def get_executive_dashboard(
-    db
+    db,
+    org_id=None
 ):
     """
-    Return executive summary
-    across assets, vulnerabilities,
-    compliance, and risk.
+    Return executive summary across assets, vulnerabilities, compliance,
+    and risk, scoped to the organization (`org_id=None` = all orgs).
     """
 
-    assets = get_all_assets(db)
+    assets = get_all_assets(db, org_id=org_id)
 
-    vulnerabilities = get_all_vulnerabilities(db)
+    vulnerabilities = get_all_vulnerabilities(db, org_id=org_id)
 
     controls = get_all_controls(db)
 
@@ -66,7 +66,8 @@ def get_executive_dashboard(
 
     asset_risks = (
         get_asset_risk_summary(
-            db
+            db,
+            org_id=org_id
         )
     )
 
@@ -79,7 +80,8 @@ def get_executive_dashboard(
     control_risks = (
         get_control_risk_analysis(
             db,
-            "nist-csf"
+            "nist-csf",
+            org_id=org_id
         )
     )
 

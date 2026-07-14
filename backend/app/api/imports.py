@@ -14,6 +14,8 @@ from app.dependencies.rbac import (
     require_role
 )
 
+from app.dependencies.tenancy import org_home
+
 from app.core.constants import (
     ROLE_ADMIN,
     ROLE_ANALYST,
@@ -54,6 +56,7 @@ def upload_report(
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    org_id=Depends(org_home),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -129,7 +132,8 @@ def upload_report(
             import_result = (
                 import_findings(
                     db,
-                    result["findings"]
+                    result["findings"],
+                    org_id
                 )
             )
 
@@ -159,6 +163,7 @@ def upload_report(
             f"file_type={file_extension}, "
             f"findings={len(result.get('findings') or [])}"
         ),
+        org_id=org_id,
     )
 
     return result

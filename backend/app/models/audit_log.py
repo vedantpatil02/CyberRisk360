@@ -16,6 +16,7 @@ from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import Text
 from sqlalchemy import DateTime
+from sqlalchemy import ForeignKey
 from sqlalchemy.sql import func
 
 from app.db.database import Base
@@ -77,5 +78,14 @@ class AuditLog(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+        index=True
+    )
+
+    # Nullable: some audited events have no organization (a failed
+    # login for an unknown email, or a platform super-admin action).
+    org_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=True,
         index=True
     )

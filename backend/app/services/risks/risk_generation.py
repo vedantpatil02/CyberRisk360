@@ -95,7 +95,7 @@ def generate_risk_for_asset(db, asset, commit: bool = True):
     Returns the risk, or None if the asset has no vulnerabilities.
     """
 
-    vulnerabilities = get_by_asset(db, asset.id)
+    vulnerabilities = get_by_asset(db, asset.id, org_id=asset.org_id)
 
     if not vulnerabilities:
         return None
@@ -129,7 +129,7 @@ def generate_risk_for_asset(db, asset, commit: bool = True):
         "owner": owner,
     }
 
-    existing = get_auto_risk_by_asset(db, asset.id)
+    existing = get_auto_risk_by_asset(db, asset.id, org_id=asset.org_id)
 
     if existing:
         # Don't clobber a manually-set treatment status (e.g. Accepted).
@@ -139,6 +139,7 @@ def generate_risk_for_asset(db, asset, commit: bool = True):
             db,
             asset_id=asset.id,
             source="auto",
+            org_id=asset.org_id,
             **fields,
         )
 

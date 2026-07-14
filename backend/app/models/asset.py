@@ -1,6 +1,7 @@
 from sqlalchemy import Column
 from sqlalchemy import Integer
 from sqlalchemy import String
+from sqlalchemy import ForeignKey
 
 from app.db.database import Base
 
@@ -43,4 +44,11 @@ class Asset(Base):
     environment = Column(
         String,
         nullable=False
+    )
+
+    org_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True
     )

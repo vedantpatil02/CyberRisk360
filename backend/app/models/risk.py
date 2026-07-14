@@ -91,3 +91,10 @@ class Risk(Base):
         nullable=False,
         server_default=text("'manual'")
     )
+
+    org_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True
+    )

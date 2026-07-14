@@ -14,6 +14,7 @@ from app.dependencies.security import (
 from app.dependencies.rbac import (
     require_role
 )
+from app.dependencies.tenancy import org_scope, org_home
 from app.core.constants import *
 
 from app.analytics.asset_risk import (
@@ -36,6 +37,7 @@ router = APIRouter()
 def create_asset(
     asset: AssetCreate,
     db: Session = Depends(get_db),
+    org_id=Depends(org_home),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -51,7 +53,8 @@ def create_asset(
         owner=asset.owner,
         criticality=asset.criticality,
         ip_address=asset.ip_address,
-        environment=asset.environment
+        environment=asset.environment,
+        org_id=org_id
     )
 
     return {
@@ -71,16 +74,18 @@ def get_assets(
     current_user=Depends(
         get_current_user
     ),
+    org_id=Depends(org_scope),
     db: Session = Depends(get_db)
 ):
     """
-    List assets. Optional `criticality`/`environment`/`asset_type`
-    filters, `sort_by` + `order`, and `limit`/`offset` pagination. With
-    no parameters, returns all assets.
+    List assets (scoped to the caller's organization). Optional
+    `criticality`/`environment`/`asset_type` filters, `sort_by` +
+    `order`, and `limit`/`offset` pagination.
     """
 
     return query_assets(
         db,
+        org_id=org_id,
         limit=limit,
         offset=offset,
         criticality=criticality,
@@ -98,6 +103,7 @@ def get_assets(
 def get_asset_vulnerabilities(
     asset_id: int,
     db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -110,7 +116,8 @@ def get_asset_vulnerabilities(
     vulnerabilities = get_by_asset(
         db,
         asset_id,
-        order_by_cvss=True
+        order_by_cvss=True,
+        org_id=org_id
     )
 
     results = []
@@ -148,6 +155,7 @@ def get_asset_vulnerabilities(
 def get_asset_summary(
     asset_id: int,
     db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -157,7 +165,7 @@ def get_asset_summary(
     )
 ):
 
-    asset = get_asset(db, asset_id)
+    asset = get_asset(db, asset_id, org_id=org_id)
 
     if not asset:
 
@@ -166,7 +174,7 @@ def get_asset_summary(
             detail="Asset not found"
         )
 
-    vulnerabilities = get_by_asset(db, asset_id)
+    vulnerabilities = get_by_asset(db, asset_id, org_id=org_id)
 
     summary = {
         "asset_id": asset.id,
@@ -195,6 +203,7 @@ def get_asset_summary(
 )
 def asset_risk_summary(
     db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -209,5 +218,6 @@ def asset_risk_summary(
     """
 
     return get_asset_risk_summary(
-        db
+        db,
+        org_id=org_id
     )

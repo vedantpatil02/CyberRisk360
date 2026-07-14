@@ -12,6 +12,9 @@ from app.repositories.vulnerabilities.vulnerability_repository import (
 )
 
 
+ORG = 1
+
+
 def _asset(db, ip="10.0.0.1", criticality="High"):
     return create_asset(
         db,
@@ -21,6 +24,7 @@ def _asset(db, ip="10.0.0.1", criticality="High"):
         criticality=criticality,
         ip_address=ip,
         environment="prod",
+        org_id=ORG,
     )
 
 
@@ -38,6 +42,7 @@ def _vuln(db, asset_id, title, severity, cvss, status="Open"):
         severity=severity,
         owner="Imported",
         status=status,
+        org_id=ORG,
     )
     db.commit()
 

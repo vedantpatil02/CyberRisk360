@@ -10,6 +10,7 @@ from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import Boolean
 from sqlalchemy import DateTime
+from sqlalchemy import ForeignKey
 from sqlalchemy import text
 from sqlalchemy.sql import func
 from pydantic import BaseModel, EmailStr
@@ -86,6 +87,13 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False
+    )
+
+    org_id = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True
     )
 
 

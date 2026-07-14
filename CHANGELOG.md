@@ -1,3 +1,43 @@
+## v0.9-alpha1
+
+### Added
+- **Multi-tenancy (organizations)** - the platform is now tenant-aware.
+  A new `organizations` table is the tenant boundary; `org_id` is added
+  to every per-organization table (users, assets, vulnerabilities,
+  risks, vulnerability-control mappings, mapping history, audit logs),
+  while reference data (frameworks, categories, controls, plugin cache)
+  stays a shared global catalog.
+- **Row-level org scoping** threaded through every repository, service,
+  analytic, dashboard, and report: reads filter to the caller's org and
+  writes are stamped with it. Enforced via `app/dependencies/tenancy.py`
+  (`org_scope` for reads, `org_home` for writes) driven by an `org_id`
+  claim now carried in the JWT.
+- **Platform super-admin** (`ROLE_SUPER_ADMIN`) that spans all orgs for
+  reads (org filter disabled). Excluded from open-registration roles so
+  it can't be self-assigned. New super-admin-only organization API:
+  `GET /organizations`, `POST /organizations`.
+- Registration assigns users to an org by `org_slug` (default: the
+  "default" org). Admin user-management is org-scoped (an org admin
+  can't touch another org's users).
+- Migration `b7c1a4e9f0d2`: creates `organizations`, seeds a "Default
+  Organization", backfills all existing rows to it, then adds the
+  NOT NULL `org_id` + FKs (audit_logs' org_id is nullable for org-less
+  events like an unknown-email login failure). Uses `batch_alter_table`
+  and disables SQLite FK enforcement during the run (env.py) so
+  recreating FK-referenced tables succeeds; verified on a populated DB
+  copy, forward and reverse.
+- `app/tests/test_multitenancy.py` - cross-org isolation (assets/vulns
+  invisible across orgs, cross-org detail 404s, super-admin sees all,
+  writes land in the caller's org) + org API RBAC. 149 -> 156 tests.
+
+### Known limitations (tracked for follow-up)
+- Control implementation *status* (Implemented/Partial/Missing) is still
+  global because controls are shared reference data; per-org control
+  status needs a join table. Gap and control-risk views ARE org-scoped
+  (they count the org's mappings).
+- The first super-admin must be provisioned out-of-band (DB/seed); no
+  bootstrap flow creates one yet.
+
 ## v0.8-alpha1
 
 ### Added

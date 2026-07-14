@@ -54,11 +54,11 @@ def test_asset_summary_not_found(client):
 def test_asset_summary_counts_by_severity(client, seed_asset, db_session):
     db_session.add(Vulnerability(
         title="v1", description="d", asset_id=seed_asset,
-        cvss_score=9.5, severity="Critical", status="Open"
+        cvss_score=9.5, severity="Critical", status="Open", org_id=1
     ))
     db_session.add(Vulnerability(
         title="v2", description="d", asset_id=seed_asset,
-        cvss_score=5.0, severity="Medium", status="Open"
+        cvss_score=5.0, severity="Medium", status="Open", org_id=1
     ))
     db_session.commit()
 
@@ -82,7 +82,7 @@ def test_asset_vulnerabilities_empty(client, seed_asset):
 def test_asset_vulnerabilities_seeded(client, seed_asset, db_session):
     db_session.add(Vulnerability(
         title="v1", description="d", asset_id=seed_asset,
-        cvss_score=9.5, severity="Critical", status="Open", plugin_id="123"
+        cvss_score=9.5, severity="Critical", status="Open", org_id=1, plugin_id="123"
     ))
     db_session.commit()
 
@@ -98,7 +98,7 @@ def test_asset_vulnerabilities_seeded(client, seed_asset, db_session):
 def test_asset_risk_summary(client, seed_asset, db_session):
     db_session.add(Vulnerability(
         title="v1", description="d", asset_id=seed_asset,
-        cvss_score=9.5, severity="Critical", status="Open"
+        cvss_score=9.5, severity="Critical", status="Open", org_id=1
     ))
     db_session.commit()
 

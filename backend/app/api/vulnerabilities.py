@@ -27,6 +27,8 @@ from app.dependencies.rbac import (
     require_role
 )
 
+from app.dependencies.tenancy import org_scope, org_home
+
 from app.services.security.cvss import (
     calculate_severity
 )
@@ -88,6 +90,8 @@ router = APIRouter()
 def create_vulnerability(
     vulnerability: VulnerabilityCreate,
     db: Session = Depends(get_db),
+    org_id=Depends(org_home),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -108,14 +112,14 @@ def create_vulnerability(
             detail="Invalid CVSS score"
         )
 
-    if not get_asset(db, vulnerability.asset_id):
+    if not get_asset(db, vulnerability.asset_id, org_id=scope):
 
         raise HTTPException(
             status_code=404,
             detail="Asset not found"
         )
 
-    if not get_risk(db, vulnerability.risk_id):
+    if not get_risk(db, vulnerability.risk_id, org_id=scope):
 
         raise HTTPException(
             status_code=404,
@@ -135,7 +139,8 @@ def create_vulnerability(
         cvss_score=vulnerability.cvss_score,
         severity=severity,
         owner=vulnerability.owner,
-        status=VULNERABILITY_STATUS_OPEN
+        status=VULNERABILITY_STATUS_OPEN,
+        org_id=org_id
     )
 
     # Automatically map to controls (pending review - see
@@ -165,6 +170,7 @@ def get_vulnerabilities(
     sort_by: str = Query("id"),
     order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -174,16 +180,16 @@ def get_vulnerabilities(
     )
 ):
     """
-    List vulnerabilities.
+    List vulnerabilities (scoped to the caller's organization).
 
     Optional `severity`/`status`/`asset_id` filters, `sort_by`
     (id/title/severity/cvss_score/status) + `order` (asc/desc), and
-    `limit`/`offset` pagination. With no parameters, returns all
-    vulnerabilities (unchanged from before).
+    `limit`/`offset` pagination.
     """
 
     return query_vulnerabilities(
         db,
+        org_id=scope,
         limit=limit,
         offset=offset,
         severity=severity,
@@ -198,6 +204,7 @@ def get_vulnerabilities(
 )
 def top_critical_vulnerabilities(
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -209,7 +216,8 @@ def top_critical_vulnerabilities(
 
     return (
         get_top_critical_vulnerabilities(
-            db
+            db,
+            org_id=scope
         )
     )
 
@@ -219,6 +227,7 @@ def top_critical_vulnerabilities(
 def get_vulnerability(
     vulnerability_id: int,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -231,7 +240,7 @@ def get_vulnerability(
     Retrieve a specific vulnerability.
     """
 
-    vulnerability = db_get_vulnerability(db, vulnerability_id)
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
 
     if not vulnerability:
 
@@ -249,6 +258,7 @@ def update_vulnerability(
     vulnerability_id: int,
     vulnerability_update: VulnerabilityUpdate,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -260,7 +270,7 @@ def update_vulnerability(
     Update vulnerability.
     """
 
-    vulnerability = db_get_vulnerability(db, vulnerability_id)
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
 
     if not vulnerability:
 
@@ -316,6 +326,7 @@ def update_vulnerability(
 def close_vulnerability(
     vulnerability_id: int,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -327,7 +338,7 @@ def close_vulnerability(
     Close vulnerability.
     """
 
-    vulnerability = db_get_vulnerability(db, vulnerability_id)
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
 
     if not vulnerability:
 
@@ -350,6 +361,7 @@ def close_vulnerability(
 @router.get("/vulnerability-summary")
 def vulnerability_summary(
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -358,7 +370,7 @@ def vulnerability_summary(
         )
     )
 ):
-    return generate_summary(db)
+    return generate_summary(db, org_id=scope)
 
 
 
@@ -368,6 +380,7 @@ def vulnerability_summary(
 def get_suggested_controls(
     vulnerability_id: int,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -389,7 +402,7 @@ def get_suggested_controls(
     Recommended Controls
     """
 
-    vulnerability = db_get_vulnerability(db, vulnerability_id)
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
 
     if not vulnerability:
 
@@ -445,6 +458,7 @@ def get_suggested_controls(
 def get_vulnerability_controls(
     vulnerability_id: int,
     db: Session = Depends(get_db),
+    scope=Depends(org_scope),
     current_user=Depends(
         require_role(
             ROLE_ADMIN,
@@ -453,6 +467,14 @@ def get_vulnerability_controls(
         )
     )
 ):
+
+    # Ensure the vulnerability belongs to the caller's org (404 for
+    # cross-org ids) before listing its mapped controls.
+    if not db_get_vulnerability(db, vulnerability_id, org_id=scope):
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
 
     controls = get_controls_by_vulnerability(db, vulnerability_id)
 

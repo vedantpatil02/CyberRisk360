@@ -7,8 +7,14 @@ Application-wide constants.
 
 from pathlib import Path
 
+# Platform super-admin: spans all organizations. Provisioned out-of-band
+# (bootstrap/seed), never via open registration, so it can't be
+# self-assigned as a privilege escalation. Deliberately excluded from
+# VALID_ROLES below.
+ROLE_SUPER_ADMIN = "super_admin"
+
 # User Roles - one operational admin role plus the six personas from the
-# product design doc (§5).
+# product design doc (§5). All of these are ORG-SCOPED.
 ROLE_ADMIN = "admin"
 ROLE_ANALYST = "analyst"          # Security Analyst
 ROLE_PENTESTER = "pentester"      # Penetration Tester

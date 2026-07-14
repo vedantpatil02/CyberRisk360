@@ -76,7 +76,8 @@ def _persist_vulnerability(db, **overrides):
         "cve_id": None,
         "plugin_id": None,
         "cvss_score": 5.0,
-        "severity": "Medium"
+        "severity": "Medium",
+        "org_id": 1
     }
     defaults.update(overrides)
 

@@ -18,10 +18,13 @@ def create_audit_log(
     entity_id: str = None,
     ip_address: str = None,
     detail: str = None,
+    org_id: int = None,
 ):
     """
     Insert one audit-log row. Does not commit - the caller controls the
-    transaction boundary (see `services/audit/audit.py`).
+    transaction boundary (see `services/audit/audit.py`). `org_id` may
+    be None for org-less events (e.g. a failed login for an unknown
+    email).
     """
 
     entry = AuditLog(
@@ -31,6 +34,7 @@ def create_audit_log(
         entity_id=(str(entity_id) if entity_id is not None else None),
         ip_address=ip_address,
         detail=detail,
+        org_id=org_id,
     )
 
     db.add(entry)
@@ -40,6 +44,7 @@ def create_audit_log(
 
 def get_audit_logs(
     db: Session,
+    org_id: int = None,
     limit: int = 50,
     offset: int = 0,
     action: str = None,
@@ -47,10 +52,14 @@ def get_audit_logs(
 ):
     """
     Return audit-log rows, most recent first, with optional filtering
-    and pagination.
+    and pagination. Scoped to `org_id` (None = all orgs, for a
+    super-admin).
     """
 
     query = db.query(AuditLog)
+
+    if org_id is not None:
+        query = query.filter(AuditLog.org_id == org_id)
 
     if action is not None:
         query = query.filter(AuditLog.action == action)

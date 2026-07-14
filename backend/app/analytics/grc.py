@@ -25,10 +25,15 @@ from app.repositories.controls.control_repository import (
 
 def get_grc_dashboard(
     db,
-    framework_name: str
+    framework_name: str,
+    org_id=None
 ):
     """
-    Return executive GRC dashboard.
+    Return executive GRC dashboard for the organization scope.
+
+    Note: control implementation status (implemented/partial/missing) is
+    global today because controls are shared reference data; the gap and
+    risk views below are org-scoped via the org's mappings.
     """
 
     controls = get_controls_by_framework(db, framework_name)
@@ -42,14 +47,16 @@ def get_grc_dashboard(
     gaps = (
         get_framework_gaps(
             db,
-            framework_name
+            framework_name,
+            org_id=org_id
         )
     )
 
     risk_analysis = (
         get_control_risk_analysis(
             db,
-            framework_name
+            framework_name,
+            org_id=org_id
         )
     )
 

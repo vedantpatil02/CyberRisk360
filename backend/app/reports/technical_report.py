@@ -47,18 +47,19 @@ def _finding_row(vulnerability, asset_names):
     }
 
 
-def build_technical_report(db, generated_by=None):
+def build_technical_report(db, generated_by=None, org_id=None):
     """
-    Build the structured Technical Vulnerability report.
+    Build the structured Technical Vulnerability report, scoped to
+    `org_id` (None = all orgs).
     """
 
-    assets = get_all_assets(db)
+    assets = get_all_assets(db, org_id=org_id)
     asset_names = {
         asset.id: (asset.name or asset.ip_address)
         for asset in assets
     }
 
-    vulnerabilities = get_all_vulnerabilities(db)
+    vulnerabilities = get_all_vulnerabilities(db, org_id=org_id)
 
     # Group findings by severity bucket, ordered most-severe first.
     grouped = {severity: [] for severity in SEVERITY_ORDER}
