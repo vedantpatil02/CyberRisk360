@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Request
 
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,7 @@ from app.dependencies.rbac import require_role
 from app.core.constants import *
 
 from app.services.risks.risk import calculate_risk_score, calculate_risk_level
+from app.services.risks.risk_generation import generate_risks_for_assets
 from app.schemas.risk_update import RiskUpdate
 from app.analytics.risk_summary import initialize_summary
 
@@ -21,7 +23,13 @@ from app.repositories.risks.risk_repository import (
     update_risk as db_update_risk
 )
 from app.repositories.assets.asset_repository import (
-    get_asset
+    get_asset,
+    get_all_assets
+)
+from app.services.audit.audit import (
+    record_audit,
+    client_ip,
+    ACTION_RISK_GENERATE
 )
 
 
@@ -79,6 +87,46 @@ def create_risk(
         "score": score,
         "level": level
     }
+
+
+@router.post("/risks/generate")
+def generate_risks(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST
+        )
+    )
+):
+    """
+    Derive (or refresh) the per-asset aggregate risk from each asset's
+    vulnerabilities and link those vulnerabilities to it.
+
+    Idempotent: existing auto-generated risks are updated in place, so
+    this is safe to re-run and is the way to backfill risks for data
+    imported before auto-generation existed.
+    """
+
+    assets = get_all_assets(db)
+
+    generated = generate_risks_for_assets(db, assets)
+
+    record_audit(
+        db,
+        action=ACTION_RISK_GENERATE,
+        actor=current_user.get("sub"),
+        entity_type="risk",
+        ip_address=client_ip(request),
+        detail=f"assets_with_risk={generated}",
+    )
+
+    return {
+        "message": "Risk generation complete",
+        "risks_generated": generated,
+    }
+
 
 @router.get("/risks")
 def get_risks(

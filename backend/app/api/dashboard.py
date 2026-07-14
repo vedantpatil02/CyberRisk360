@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.database import get_db
 from app.analytics.grc import get_grc_dashboard
 from app.dependencies.rbac import require_role
-from app.core.constants import ROLE_ADMIN, ROLE_ANALYST,ROLE_AUDITOR
+from app.core.constants import READ_ROLES
 from app.analytics.executive import (
     get_executive_dashboard
 )
@@ -85,11 +85,7 @@ def grc_dashboard(
     framework_name: str,
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_role(
-            ROLE_ADMIN,
-            ROLE_ANALYST,
-            ROLE_AUDITOR
-        )
+        require_role(*READ_ROLES)
     )
 ):
     """
@@ -107,11 +103,7 @@ def grc_dashboard(
 def executive_dashboard(
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_role(
-            ROLE_ADMIN,
-            ROLE_ANALYST,
-            ROLE_AUDITOR
-        )
+        require_role(*READ_ROLES)
     )
 ):
     """

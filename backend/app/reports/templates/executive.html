@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set o = sections.overview %}
+{% set sev = sections.vulnerabilities.by_severity %}
+{% set st = sections.vulnerabilities.by_status %}
+
+<h2>At a Glance</h2>
+<table>
+    <tr>
+        <th>Assets</th>
+        <th>Vulnerabilities</th>
+        <th>Controls Tracked</th>
+        <th>Overall Control Risk</th>
+    </tr>
+    <tr>
+        <td class="kpi">{{ o.total_assets }}</td>
+        <td class="kpi">{{ o.total_vulnerabilities }}</td>
+        <td class="kpi">{{ o.total_controls }}</td>
+        <td class="kpi">{{ o.overall_control_risk_score }}</td>
+    </tr>
+</table>
+
+<h2>Vulnerability Posture</h2>
+<table>
+    <tr>
+        <th>Critical</th><th>High</th><th>Medium</th><th>Low</th>
+        <th>Open</th><th>Closed</th>
+    </tr>
+    <tr>
+        <td class="sev-critical">{{ sev.critical }}</td>
+        <td class="sev-high">{{ sev.high }}</td>
+        <td class="sev-medium">{{ sev.medium }}</td>
+        <td class="sev-low">{{ sev.low }}</td>
+        <td>{{ st.open }}</td>
+        <td>{{ st.closed }}</td>
+    </tr>
+</table>
+
+<h2>Compliance by Framework</h2>
+<table>
+    <tr>
+        <th>Framework</th><th>Version</th><th>Controls</th>
+        <th>Implemented</th><th>Partial</th><th>Missing</th>
+        <th>Score</th>
+    </tr>
+    {% for fw in sections.framework_compliance %}
+    <tr>
+        <td>{{ fw.framework }}</td>
+        <td class="muted">{{ fw.version }}</td>
+        <td>{{ fw.total_controls }}</td>
+        <td>{{ fw.implemented }}</td>
+        <td>{{ fw.partial }}</td>
+        <td>{{ fw.missing }}</td>
+        <td>{{ fw.compliance_score }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted">No frameworks loaded.</td></tr>
+    {% endfor %}
+</table>
+
+<h2>Highest-Risk Assets</h2>
+<table>
+    <tr>
+        <th>Asset</th><th>Critical</th><th>High</th>
+        <th>Medium</th><th>Low</th><th>Risk Score</th>
+    </tr>
+    {% for a in sections.top_risk_assets %}
+    <tr>
+        <td>{{ a.asset }}</td>
+        <td class="sev-critical">{{ a.critical }}</td>
+        <td class="sev-high">{{ a.high }}</td>
+        <td class="sev-medium">{{ a.medium }}</td>
+        <td class="sev-low">{{ a.low }}</td>
+        <td>{{ a.risk_score }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No assets recorded.</td></tr>
+    {% endfor %}
+</table>
+
+<h2>Highest-Risk Controls</h2>
+<table>
+    <tr>
+        <th>Framework</th><th>Control</th><th>Name</th>
+        <th>Findings</th><th>Risk Score</th>
+    </tr>
+    {% for c in sections.top_risk_controls %}
+    <tr>
+        <td class="muted">{{ c.framework }}</td>
+        <td>{{ c.control_id }}</td>
+        <td>{{ c.name }}</td>
+        <td>{{ c.affected_vulnerabilities }}</td>
+        <td>{{ c.risk_score }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">No control risk data.</td></tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

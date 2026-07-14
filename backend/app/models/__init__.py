@@ -8,3 +8,4 @@ from app.models.category import Category
 from app.models.vulnerability_control_mapping import VulnerabilityControlMapping
 from app.models.mapping_history import MappingHistory
 from app.models.plugin_enrichment_cache import PluginEnrichmentCache
+from app.models.audit_log import AuditLog

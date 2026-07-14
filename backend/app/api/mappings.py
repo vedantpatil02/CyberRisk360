@@ -10,6 +10,7 @@ and approve or reject a mapping.
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Request
 
 from sqlalchemy.orm import Session
 
@@ -36,6 +37,13 @@ from app.services.mapping.mapping_service import (
     list_pending_mappings,
     get_mapping_history,
     review_mapping
+)
+
+from app.services.audit.audit import (
+    record_audit,
+    client_ip,
+    ACTION_MAPPING_APPROVE,
+    ACTION_MAPPING_REJECT
 )
 
 router = APIRouter()
@@ -108,6 +116,7 @@ def get_mapping_history_endpoint(
 )
 def approve_mapping(
     mapping_id: int,
+    request: Request,
     review: MappingReview = MappingReview(),
     db: Session = Depends(get_db),
     current_user=Depends(
@@ -135,6 +144,19 @@ def approve_mapping(
             detail="Mapping not found"
         )
 
+    record_audit(
+        db,
+        action=ACTION_MAPPING_APPROVE,
+        actor=current_user.get("sub"),
+        entity_type="mapping",
+        entity_id=mapping_id,
+        ip_address=client_ip(request),
+    )
+
+    # The audit commit expires `mapping`; reload it so the response
+    # serializes its columns rather than an empty object.
+    db.refresh(mapping)
+
     return mapping
 
 
@@ -143,6 +165,7 @@ def approve_mapping(
 )
 def reject_mapping(
     mapping_id: int,
+    request: Request,
     review: MappingReview = MappingReview(),
     db: Session = Depends(get_db),
     current_user=Depends(
@@ -169,5 +192,18 @@ def reject_mapping(
             status_code=404,
             detail="Mapping not found"
         )
+
+    record_audit(
+        db,
+        action=ACTION_MAPPING_REJECT,
+        actor=current_user.get("sub"),
+        entity_type="mapping",
+        entity_id=mapping_id,
+        ip_address=client_ip(request),
+    )
+
+    # The audit commit expires `mapping`; reload it so the response
+    # serializes its columns rather than an empty object.
+    db.refresh(mapping)
 
     return mapping

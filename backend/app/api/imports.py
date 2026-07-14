@@ -3,6 +3,7 @@ from fastapi import Depends
 from fastapi import UploadFile
 from fastapi import File
 from fastapi import HTTPException
+from fastapi import Request
 
 import os
 import uuid
@@ -32,6 +33,12 @@ from app.services.vulnerabilities.vulnerability_importer import (
     import_findings
 )
 
+from app.services.audit.audit import (
+    record_audit,
+    client_ip,
+    ACTION_IMPORT_UPLOAD
+)
+
 router = APIRouter()
 
 ALLOWED_REPORT_EXTENSIONS = {"pdf", "csv", "nessus"}
@@ -41,6 +48,7 @@ ALLOWED_REPORT_EXTENSIONS = {"pdf", "csv", "nessus"}
     "/imports/nessus_report_upload"
 )
 def upload_report(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user=Depends(
@@ -137,5 +145,17 @@ def upload_report(
                 status_code=500,
                 detail="Failed to process import findings"
             )
+
+    record_audit(
+        db,
+        action=ACTION_IMPORT_UPLOAD,
+        actor=current_user.get("sub"),
+        entity_type="import",
+        ip_address=client_ip(request),
+        detail=(
+            f"file_type={file_extension}, "
+            f"findings={len(result.get('findings') or [])}"
+        ),
+    )
 
     return result

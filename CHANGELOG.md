@@ -1,3 +1,124 @@
+## v0.7-alpha3
+
+### Added
+- **Automatic risk generation from vulnerabilities**
+  (`app/services/risks/risk_generation.py`). Each asset now gets one
+  maintained aggregate risk (`source="auto"`): every vulnerability on
+  the asset is linked to it via the previously-unused
+  `vulnerability.risk_id` FK, impact is derived from the asset's
+  criticality, likelihood from the asset's worst finding, and the risk
+  is assigned to the asset's owner (falling back to "Unassigned" when
+  the asset has no owner set). Idempotent - re-running updates the
+  existing auto risk in place rather than duplicating, so it tracks
+  findings as they're imported or closed. Manual risks
+  (`source="manual"`) are never modified by the engine.
+- Auto risks are produced on **import** (wired into the vulnerability
+  importer's write phase) and on demand via a new backfill endpoint,
+  **`POST /risks/generate`** (admin/analyst, audited as `risk.generate`),
+  which derives/refreshes risks for every asset - the way to populate
+  risks for data imported before this existed.
+- `source` column on `risks` (migration `21824ec0933b`) distinguishing
+  auto- from manually-created risks; surfaced in the risk API responses.
+- `app/tests/test_risk_generation.py` (8 tests): derivation, owner
+  fallback, vulnerability linkage, idempotency, manual-risk isolation,
+  the backfill endpoint + RBAC, and end-to-end import wiring.
+  125 -> 133 tests.
+
+## v0.7-alpha2
+
+### Added
+- **Audit trail** (`audit_logs` table + `app/services/audit/`): an
+  append-only log of security-relevant actions - authentication
+  (`login.success`/`login.failure`/`login.locked`), account management
+  (`user.register`/`user.password_change`/`user.password_reset`/
+  `user.activate`/`user.deactivate`), report imports (`import.upload`),
+  and mapping review decisions (`mapping.approve`/`mapping.reject`).
+  Each entry records actor, action, entity, source IP, and timestamp.
+  This is the general audit log a GRC product is expected to keep,
+  distinct from the mapping-only `MappingHistory`.
+- `GET /audit-logs` - oversight-only (admin/auditor/CISO/manager) read
+  API with `action`/`actor` filters and `limit`/`offset` pagination.
+- **Account lockout**: after 5 consecutive failed logins an account is
+  locked for 15 minutes (`MAX_FAILED_LOGIN_ATTEMPTS` /
+  `ACCOUNT_LOCKOUT_MINUTES`); a successful login clears the counter.
+  Complements the existing per-IP `/login` rate limit with a
+  per-account control. `attempt_login` returns a specific outcome
+  (invalid / locked / inactive) that the endpoint maps to 401/403.
+- **User identity fields**: `is_active`, `failed_login_attempts`,
+  `locked_until`, `last_login`, `created_at`, `updated_at`. Disabled
+  accounts (`is_active = false`) are rejected at login while keeping
+  their history.
+- **Account management endpoints**: `POST /users/me/change-password`
+  (self, verifies current password, 8-char minimum),
+  `POST /users/{id}/reset-password` (admin), and
+  `POST /users/{id}/{activate,deactivate}` (admin). Token-based
+  self-service "forgot password" is deferred to Phase 5 (needs email).
+- **Persona roles**: the three original roles are joined by the
+  remaining design-doc personas - `pentester`, `grc_analyst`,
+  `manager`, `ciso`. Endpoints now reference semantic role groups
+  (`WRITE_ROLES` / `COMPLIANCE_ROLES` / `OVERSIGHT_ROLES` / `READ_ROLES`
+  in `constants.py`) so a new persona slots in without editing every
+  router. Dashboards and reports widened to all read roles; audit log
+  to the oversight roles.
+- Migrations `dd92d089fdb0` (audit_logs) and `cf7f92f27fe3` (user
+  fields). The user-fields migration uses `batch_alter_table` so the
+  `created_at`/`updated_at` `CURRENT_TIMESTAMP` defaults apply on SQLite
+  (a plain `ADD COLUMN` there rejects that default); verified against a
+  populated table.
+- 105 -> 125 tests: `test_audit.py`, `test_user_hardening.py`.
+
+### Fixed
+- Mapping approve/reject endpoints returned an empty body after audit
+  logging was added: `record_audit`'s commit expired the `mapping` ORM
+  object (SQLAlchemy `expire_on_commit`) and nothing reloaded it before
+  serialization. Fixed with a `db.refresh(mapping)` after the audit
+  write.
+
+## v0.7-alpha1
+
+### Fixed
+- `/docs` (Swagger UI) and `/redoc` rendered as a blank page: the
+  security-headers middleware sent `Content-Security-Policy:
+  default-src 'none'` on *every* response, which blocked Swagger UI's
+  CDN assets and inline bootstrap script. Its comment ("this API never
+  serves HTML/JS") stopped being true once the docs UIs - and the new
+  HTML report views - are considered. CSP is now chosen per response:
+  strict `default-src 'none'` for JSON, a Swagger/ReDoc policy allowing
+  the jsdelivr CDN + inline bootstrap + same-origin `/openapi.json`
+  fetch on `/docs` and `/redoc`, and an inline-`style-src`-only policy
+  (no scripts, no external origins) for HTML reports. Regression-
+  guarded by `test_docs_csp_allows_swagger_cdn`,
+  `test_json_report_keeps_strict_csp`, and the HTML-report CSP assertion.
+
+### Added
+- Reporting module (`app/reports/`), replacing the four 0-byte stubs
+  that had shipped since the MVP. Three reports, each composed purely
+  from existing analytics (no new business logic, no schema change):
+  - **Executive Summary** - assets/vulnerabilities/controls at a glance,
+    per-framework compliance, top-risk assets and controls
+  - **Technical Vulnerability Report** - the full finding register
+    grouped by severity (worst CVSS first) with remediation guidance
+  - **Compliance Assessment Report** - per-framework posture, control
+    gaps (affected/unaffected), and control risk
+- New reporting API (`app/api/reports.py`): `GET /reports/executive`,
+  `GET /reports/technical`, `GET /reports/compliance/{framework_name}`,
+  each with `?format=json|html|pdf`, RBAC-guarded to admin/analyst/
+  auditor. Unknown framework -> 404, render failure -> 500.
+- HTML rendering via Jinja2 with autoescaping **on** - reports embed
+  user-controlled vulnerability text (titles, descriptions), so escaping
+  is a security control against stored-XSS-in-report, not cosmetic.
+  Covered by a test asserting a raw `<script>` in a finding title does
+  not survive into the HTML.
+- PDF rendering via xhtml2pdf - pure-Python, needs no system libraries,
+  so the app container produces PDFs with no extra OS packages.
+- `app/tests/test_reports.py` (7 tests): each report in JSON/HTML/PDF
+  (PDF verified by `%PDF` magic bytes), compliance 404, and an RBAC
+  denial. 96 -> 103 tests. Compliance success path additionally smoke-
+  tested end-to-end against a bootstrapped DB (all 5 frameworks).
+- `ROADMAP.md` - phased industry-readiness roadmap (reporting first,
+  then audit log + user hardening, scale floor, multi-tenancy,
+  workflow/integrations, frontend).
+
 ## v0.6-alpha16
 
 ### Changed

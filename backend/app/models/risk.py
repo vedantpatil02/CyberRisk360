@@ -10,6 +10,7 @@ from sqlalchemy import Column
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import ForeignKey
+from sqlalchemy import text
 
 from app.db.database import Base
 
@@ -80,4 +81,13 @@ class Risk(Base):
     status = Column(
         String,
         default="Open"
+    )
+
+    # "manual" for user-created risks, "auto" for risks the engine
+    # derives from an asset's vulnerabilities. Lets the generator find
+    # and update its own risk for an asset without touching manual ones.
+    source = Column(
+        String,
+        nullable=False,
+        server_default=text("'manual'")
     )

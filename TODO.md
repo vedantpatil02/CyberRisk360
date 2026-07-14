@@ -112,6 +112,23 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       `get_plugin_enrichment` now returns `(dict, cache_written: bool)`
       so phase 1 only commits when it actually wrote the cache, not on
       every cache hit. 91 → 96 tests
+- [x] Reporting module (`app/reports/`) - the four 0-byte stubs are now
+      implemented: Executive Summary, Technical Vulnerability, and
+      Compliance Assessment reports, each served as JSON/HTML/PDF via
+      `GET /reports/*` (RBAC admin/analyst/auditor). Builders compose
+      existing analytics only (no schema change). HTML via Jinja2
+      (autoescaped - XSS control over user-supplied vuln text), PDF via
+      pure-Python xhtml2pdf (no system libs, container-safe). See
+      `ROADMAP.md` Phase 1. 96 → 103 tests
+- [x] Phase 2 - audit log + user hardening. New `audit_logs` table and
+      `record_audit()` service wired into auth, account management,
+      imports, and mapping review; oversight-only `GET /audit-logs`.
+      Account lockout (5 fails / 15 min), disabled-account rejection,
+      `last_login`/`is_active`/timestamps on `User`, self change-password
+      + admin reset/activate/deactivate. Six design-doc personas via
+      semantic role groups. Migrations `dd92d089fdb0` + `cf7f92f27fe3`
+      (batch_alter_table for the SQLite CURRENT_TIMESTAMP default). See
+      `ROADMAP.md` Phase 2. 103 → 125 tests
 
 ## Next up
 
@@ -139,7 +156,6 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
 ## Deferred (explicitly out of scope per Phase 1 Stabilization)
 
 - [ ] `services/enrichment/cve_enrichment.py` (currently a no-op)
-- [ ] `backend/app/reports/*.py` report generation (all empty stubs)
 - [ ] Additional frameworks: PCI DSS, SOC 2, HIPAA, NIST SP 800-53
 - [ ] Kubernetes deployment (Docker/Compose done - see Done section)
 - [ ] React frontend

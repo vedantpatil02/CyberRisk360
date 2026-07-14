@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set fw = sections.framework %}
+{% set cs = sections.compliance_summary %}
+{% set gaps = sections.gaps %}
+
+<h2>{{ fw.name }} ({{ fw.version }})</h2>
+<table>
+    <tr>
+        <th>Total Controls</th><th>Implemented</th>
+        <th>Partial</th><th>Missing</th><th>Compliance Score</th>
+    </tr>
+    <tr>
+        <td class="kpi">{{ cs.total_controls }}</td>
+        <td class="sev-low">{{ cs.implemented }}</td>
+        <td class="sev-medium">{{ cs.partial }}</td>
+        <td class="sev-critical">{{ cs.missing }}</td>
+        <td class="kpi">{{ cs.compliance_score }}%</td>
+    </tr>
+</table>
+
+<h2>Controls With Findings ({{ gaps.affected_controls | length }})</h2>
+<table>
+    <tr>
+        <th>Control</th><th>Name</th><th>Findings Mapped</th>
+    </tr>
+    {% for c in gaps.affected_controls %}
+    <tr>
+        <td>{{ c.control_id }}</td>
+        <td>{{ c.name }}</td>
+        <td>{{ c.affected_vulnerabilities }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="muted">No controls have mapped findings.</td></tr>
+    {% endfor %}
+</table>
+
+<h2>Highest-Risk Controls</h2>
+<table>
+    <tr>
+        <th>Control</th><th>Name</th><th>Findings</th>
+        <th>Critical</th><th>High</th><th>Risk Score</th>
+    </tr>
+    {% for c in sections.control_risk %}
+    <tr>
+        <td>{{ c.control_id }}</td>
+        <td>{{ c.name }}</td>
+        <td>{{ c.affected_vulnerabilities }}</td>
+        <td class="sev-critical">{{ c.critical }}</td>
+        <td class="sev-high">{{ c.high }}</td>
+        <td>{{ c.risk_score }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No control risk data.</td></tr>
+    {% endfor %}
+</table>
+
+<h2>Unaddressed Controls ({{ gaps.unaffected_controls | length }})</h2>
+<table>
+    <tr>
+        <th>Control</th><th>Name</th>
+    </tr>
+    {% for c in gaps.unaffected_controls %}
+    <tr>
+        <td>{{ c.control_id }}</td>
+        <td>{{ c.name }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="2" class="muted">Every control has mapped coverage.</td></tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

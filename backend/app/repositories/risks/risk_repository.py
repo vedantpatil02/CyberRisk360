@@ -25,6 +25,25 @@ def get_risk(
     )
 
 
+def get_auto_risk_by_asset(
+    db: Session,
+    asset_id: int
+):
+    """
+    Return the engine-generated ("auto") risk for an asset, if any.
+    There is at most one per asset; manual risks are never returned.
+    """
+
+    return (
+        db.query(Risk)
+        .filter(
+            Risk.asset_id == asset_id,
+            Risk.source == "auto"
+        )
+        .first()
+    )
+
+
 def create_risk(
     db: Session,
     **fields

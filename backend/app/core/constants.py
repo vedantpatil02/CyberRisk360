@@ -7,10 +7,45 @@ Application-wide constants.
 
 from pathlib import Path
 
-# User Roles
+# User Roles - one operational admin role plus the six personas from the
+# product design doc (§5).
 ROLE_ADMIN = "admin"
-ROLE_ANALYST = "analyst"
-ROLE_AUDITOR = "auditor"
+ROLE_ANALYST = "analyst"          # Security Analyst
+ROLE_PENTESTER = "pentester"      # Penetration Tester
+ROLE_GRC_ANALYST = "grc_analyst"  # GRC Analyst
+ROLE_AUDITOR = "auditor"          # Auditor
+ROLE_MANAGER = "manager"          # Security Manager
+ROLE_CISO = "ciso"               # CISO
+
+# Every recognized role.
+ALL_ROLES = (
+    ROLE_ADMIN,
+    ROLE_ANALYST,
+    ROLE_PENTESTER,
+    ROLE_GRC_ANALYST,
+    ROLE_AUDITOR,
+    ROLE_MANAGER,
+    ROLE_CISO,
+)
+
+# Semantic role groups, used at endpoints instead of hard-coding role
+# lists. Keeping the tiers here (rather than per-endpoint) is what lets a
+# new persona be slotted in without editing every router.
+#
+# WRITE_ROLES     - may create/modify technical findings & inventory
+# COMPLIANCE_ROLES- may manage controls/compliance state
+# OVERSIGHT_ROLES - may read the audit trail
+# READ_ROLES      - may view dashboards, reports, and read-only data
+WRITE_ROLES = (ROLE_ADMIN, ROLE_ANALYST, ROLE_PENTESTER)
+COMPLIANCE_ROLES = (ROLE_ADMIN, ROLE_ANALYST, ROLE_GRC_ANALYST)
+OVERSIGHT_ROLES = (ROLE_ADMIN, ROLE_AUDITOR, ROLE_CISO, ROLE_MANAGER)
+READ_ROLES = ALL_ROLES
+
+# Account lockout (brute-force protection). After this many consecutive
+# failed logins, the account is locked for the cooldown window; a
+# successful login resets the counter.
+MAX_FAILED_LOGIN_ATTEMPTS = 5
+ACCOUNT_LOCKOUT_MINUTES = 15
 
 
 # Risk Statuses

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set s = sections.summary %}
+
+<h2>Summary</h2>
+<table>
+    <tr>
+        <th>Total Findings</th><th>Affected Assets</th>
+        <th>Critical</th><th>High</th><th>Medium</th><th>Low</th>
+        <th>Open</th><th>Closed</th>
+    </tr>
+    <tr>
+        <td class="kpi">{{ s.total_findings }}</td>
+        <td class="kpi">{{ s.affected_assets }}</td>
+        <td class="sev-critical">{{ s.by_severity.critical }}</td>
+        <td class="sev-high">{{ s.by_severity.high }}</td>
+        <td class="sev-medium">{{ s.by_severity.medium }}</td>
+        <td class="sev-low">{{ s.by_severity.low }}</td>
+        <td>{{ s.by_status.open }}</td>
+        <td>{{ s.by_status.closed }}</td>
+    </tr>
+</table>
+
+{% for group in sections.findings_by_severity %}
+<h2>{{ group.severity | capitalize }} Findings ({{ group.findings | length }})</h2>
+<table>
+    <tr>
+        <th>Title</th><th>CVSS</th><th>CVE</th>
+        <th>Host / Asset</th><th>Status</th>
+    </tr>
+    {% for f in group.findings %}
+    <tr>
+        <td>
+            {{ f.title }}
+            {% if f.description %}
+            <div class="finding-desc">{{ f.description }}</div>
+            {% endif %}
+            {% if f.solution %}
+            <div class="finding-desc"><b>Fix:</b> {{ f.solution }}</div>
+            {% endif %}
+        </td>
+        <td>{{ f.cvss_score }}</td>
+        <td>{{ f.cve_id or "-" }}</td>
+        <td>
+            {{ f.ip_address or "-" }}
+            {% if f.asset %}<br /><span class="muted">{{ f.asset }}</span>{% endif %}
+        </td>
+        <td>{{ f.status }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<h2>Findings</h2>
+<p class="muted">No vulnerabilities recorded.</p>
+{% endfor %}
+
+{% endblock %}
