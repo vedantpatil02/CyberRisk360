@@ -8,6 +8,7 @@ policy and the canonical action keys.
 """
 
 from app.repositories.audit.audit_repository import create_audit_log
+from app.core.net import get_client_ip
 
 
 # Canonical action keys - referenced from call sites so a typo shows up
@@ -31,18 +32,12 @@ SYSTEM_ACTOR = "system"
 
 def client_ip(request):
     """
-    Best-effort source IP for an incoming request.
-
-    Trusts `request.client.host` directly - correct with no reverse
-    proxy in front (the current deployment). If a proxy is ever added,
-    this is the single place to start honoring `X-Forwarded-For` (see
-    the matching note on rate limiting in TODO.md).
+    Best-effort source IP for an incoming request. Honors
+    `X-Forwarded-For` only when `TRUST_PROXY_HEADERS` is enabled (see
+    `app/core/net.py`).
     """
 
-    if request is None or request.client is None:
-        return None
-
-    return request.client.host
+    return get_client_ip(request)
 
 
 def record_audit(

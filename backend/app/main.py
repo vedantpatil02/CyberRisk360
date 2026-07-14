@@ -7,7 +7,11 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import CORS_ALLOWED_ORIGINS
 from app.core.rate_limiter import limiter
+from app.core.logging import configure_logging
 from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.request_logging import RequestLoggingMiddleware
+
+configure_logging()
 
 from app.api.auth import router as auth_router
 from app.api.users import router as user_router
@@ -21,6 +25,7 @@ from app.api.dashboard import (router as dashboard_router)
 from app.api.mappings import router as mapping_router
 from app.api.reports import router as report_router
 from app.api.audit import router as audit_router
+from app.api.health import router as health_router
 import app.models
 
 # Schema is managed exclusively by Alembic (see backend/alembic/ and
@@ -40,6 +45,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,6 +68,7 @@ app.include_router(dashboard_router)
 app.include_router(mapping_router)
 app.include_router(report_router)
 app.include_router(audit_router)
+app.include_router(health_router)
 
 @app.get("/")
 def home():

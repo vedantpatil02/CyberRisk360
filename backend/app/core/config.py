@@ -50,3 +50,18 @@ CORS_ALLOWED_ORIGINS = [
     for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+
+# When true, trust the `X-Forwarded-For` header for the client IP (rate
+# limiting, audit trail). Enable ONLY when a trusted reverse proxy sits
+# in front and sets this header - otherwise a client could spoof its IP.
+# Default false: read the socket peer address directly.
+TRUST_PROXY_HEADERS = (
+    os.environ.get("TRUST_PROXY_HEADERS", "false").lower()
+    in ("1", "true", "yes")
+)
+
+# Log level and format. LOG_FORMAT=json emits one JSON object per line
+# (friendly to log aggregators); anything else uses a human-readable
+# console format.
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOG_FORMAT = os.environ.get("LOG_FORMAT", "console").lower()

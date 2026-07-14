@@ -7,7 +7,8 @@ from fastapi import Request
 
 import os
 import uuid
-import traceback
+
+from app.core.logging import get_logger
 
 from app.dependencies.rbac import (
     require_role
@@ -40,6 +41,8 @@ from app.services.audit.audit import (
 )
 
 router = APIRouter()
+
+logger = get_logger("imports")
 
 ALLOWED_REPORT_EXTENSIONS = {"pdf", "csv", "nessus"}
 
@@ -112,7 +115,7 @@ def upload_report(
         # generic message so internal details (paths, parser
         # internals, etc.) aren't leaked. Covers malformed CSV/XML
         # and any other unexpected parse failure.
-        traceback.print_exc()
+        logger.exception("Failed to parse uploaded report")
 
         raise HTTPException(
             status_code=400,
@@ -139,7 +142,7 @@ def upload_report(
             # Full traceback stays server-side; the client only gets
             # a generic message so internal details (paths, query
             # text, etc.) aren't leaked.
-            traceback.print_exc()
+            logger.exception("Failed to process import findings")
 
             raise HTTPException(
                 status_code=500,

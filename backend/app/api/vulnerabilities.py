@@ -6,9 +6,12 @@ Manage vulnerability records and
 associate them with assets and risks.
 """
 
+from typing import Optional
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Query
 
 from sqlalchemy.orm import Session
 
@@ -58,6 +61,7 @@ from app.services.vulnerabilities.vulnerability_summary import (
 
 from app.repositories.vulnerabilities.vulnerability_repository import (
     get_all_vulnerabilities,
+    query_vulnerabilities,
     get_vulnerability as db_get_vulnerability,
     create_vulnerability as db_create_vulnerability,
     update_vulnerability as db_update_vulnerability
@@ -153,6 +157,13 @@ def create_vulnerability(
 
 @router.get("/vulnerabilities")
 def get_vulnerabilities(
+    limit: Optional[int] = Query(None, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    severity: Optional[str] = None,
+    status: Optional[str] = None,
+    asset_id: Optional[int] = None,
+    sort_by: str = Query("id"),
+    order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user=Depends(
         require_role(
@@ -163,10 +174,24 @@ def get_vulnerabilities(
     )
 ):
     """
-    Retrieve all vulnerabilities.
+    List vulnerabilities.
+
+    Optional `severity`/`status`/`asset_id` filters, `sort_by`
+    (id/title/severity/cvss_score/status) + `order` (asc/desc), and
+    `limit`/`offset` pagination. With no parameters, returns all
+    vulnerabilities (unchanged from before).
     """
 
-    return get_all_vulnerabilities(db)
+    return query_vulnerabilities(
+        db,
+        limit=limit,
+        offset=offset,
+        severity=severity,
+        status=status,
+        asset_id=asset_id,
+        sort_by=sort_by,
+        order=order,
+    )
 
 @router.get(
     "/vulnerabilities/top-critical"

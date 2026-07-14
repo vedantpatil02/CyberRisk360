@@ -1,6 +1,9 @@
+from typing import Optional
+
 from fastapi import Depends
 from fastapi import APIRouter
 from fastapi import HTTPException
+from fastapi import Query
 from sqlalchemy.orm import Session
 
 from app.schemas.asset import AssetCreate
@@ -19,6 +22,7 @@ from app.analytics.asset_risk import (
 
 from app.repositories.assets.asset_repository import (
     get_all_assets,
+    query_assets,
     get_asset,
     create_asset as db_create_asset
 )
@@ -57,12 +61,34 @@ def create_asset(
 
 @router.get("/assets")
 def get_assets(
+    limit: Optional[int] = Query(None, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    criticality: Optional[str] = None,
+    environment: Optional[str] = None,
+    asset_type: Optional[str] = None,
+    sort_by: str = Query("id"),
+    order: str = Query("asc", pattern="^(asc|desc)$"),
     current_user=Depends(
         get_current_user
     ),
     db: Session = Depends(get_db)
 ):
-    return get_all_assets(db)
+    """
+    List assets. Optional `criticality`/`environment`/`asset_type`
+    filters, `sort_by` + `order`, and `limit`/`offset` pagination. With
+    no parameters, returns all assets.
+    """
+
+    return query_assets(
+        db,
+        limit=limit,
+        offset=offset,
+        criticality=criticality,
+        environment=environment,
+        asset_type=asset_type,
+        sort_by=sort_by,
+        order=order,
+    )
 
 
 

@@ -5,6 +5,14 @@ from app.models.asset import Asset
 from app.models.vulnerability import Vulnerability
 
 
+ASSET_SORT_COLUMNS = {
+    "id": Asset.id,
+    "name": Asset.name,
+    "criticality": Asset.criticality,
+    "environment": Asset.environment,
+}
+
+
 def get_all_assets(
     db: Session
 ):
@@ -12,6 +20,52 @@ def get_all_assets(
         db.query(Asset)
         .all()
     )
+
+
+def query_assets(
+    db: Session,
+    limit: int = None,
+    offset: int = 0,
+    criticality: str = None,
+    environment: str = None,
+    asset_type: str = None,
+    sort_by: str = "id",
+    order: str = "asc",
+):
+    """
+    List assets with optional filtering, sorting, and pagination. With
+    no arguments this returns every row.
+    """
+
+    query = db.query(Asset)
+
+    if criticality is not None:
+        query = query.filter(
+            func.lower(Asset.criticality) == criticality.lower()
+        )
+
+    if environment is not None:
+        query = query.filter(
+            func.lower(Asset.environment) == environment.lower()
+        )
+
+    if asset_type is not None:
+        query = query.filter(
+            func.lower(Asset.asset_type) == asset_type.lower()
+        )
+
+    column = ASSET_SORT_COLUMNS.get(sort_by, Asset.id)
+    query = query.order_by(
+        column.desc() if order == "desc" else column.asc()
+    )
+
+    if offset:
+        query = query.offset(offset)
+
+    if limit is not None:
+        query = query.limit(limit)
+
+    return query.all()
 
 
 def count_assets(

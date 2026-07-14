@@ -141,11 +141,11 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       current single-instance `docker-compose.yml`, but needs a shared
       backend (e.g. Redis) before ever running multiple backend
       replicas, since each process would track limits independently
-- [ ] `get_remote_address` (rate limiting's key function) trusts
-      `request.client.host` directly - correct with no reverse proxy in
-      front today, but would need to trust `X-Forwarded-For` instead if
-      one is ever added, otherwise every request appears to come from
-      the proxy's IP
+- [x] `X-Forwarded-For` handling (Phase 3): rate limiting and the audit
+      trail now share `app/core/net.py::get_client_ip`, which trusts
+      `X-Forwarded-For` when `TRUST_PROXY_HEADERS=true` (behind a trusted
+      proxy) and otherwise reads the socket peer. Replaced slowapi's
+      `get_remote_address` as the limiter key function
 - [ ] Verify the Docker setup (`docker-compose.yml`, `backend/Dockerfile`,
       `backend/docker-entrypoint.sh`) with a real `docker compose up` in
       an environment with daemon access - written and syntax-checked

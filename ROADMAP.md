@@ -44,15 +44,22 @@ lack. User identity is currently minimal. Low schema risk.
   `READ_ROLES`) — pentester, GRC analyst, security manager, CISO
   (105 → 125 tests)
 
-## Phase 3 — Scale & correctness floor ⬜
+## Phase 3 — Scale & correctness floor 🚧
 
-- ⬜ Pagination + filtering + sorting on all list endpoints
-  (`/vulnerabilities`, `/assets`, …) — one Nessus import can be thousands
-  of findings
-- ⬜ `/health` and `/ready` endpoints; structured logging; basic metrics
-- ⬜ Object storage for uploads (S3-compatible) instead of local disk
-- ⬜ Redis-backed rate limiting + `X-Forwarded-For` handling behind a
-  proxy (carried from `TODO.md`)
+- ✅ Pagination + filtering + sorting on the list endpoints
+  (`/vulnerabilities`, `/assets`, `/risks`) — opt-in `limit`/`offset`,
+  filters, and allowlisted `sort_by`/`order`
+- ✅ `/health` and `/ready` endpoints (readiness checks DB + migration
+  head); structured logging + `X-Request-ID` request correlation
+- ✅ `X-Forwarded-For` handling behind a proxy, gated by
+  `TRUST_PROXY_HEADERS` (shared client-IP resolver for rate limiting +
+  audit)
+- ⬜ Object storage for uploads (S3-compatible) instead of local disk —
+  `UPLOAD_DIR` is now env-configurable as a stepping stone; needs the
+  storage backend + infra to build against
+- ⬜ Redis-backed rate limiting for multi-replica deployments — needs
+  Redis to build against
+- ⬜ Basic metrics endpoint (Prometheus-style)
 
 ## Phase 4 — Multi-tenancy ⬜
 
@@ -80,5 +87,5 @@ acknowledged now.
 
 ---
 
-**Current focus:** Phases 1 & 2 complete — next is Phase 3 (scale &
-correctness floor).
+**Current focus:** Phases 1 & 2 complete; Phase 3 largely done
+(remaining: object storage + Redis, both blocked on external infra).

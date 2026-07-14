@@ -99,8 +99,16 @@ MAPPING_STATUS_PENDING = "pending"
 MAPPING_STATUS_APPROVED = "approved"
 MAPPING_STATUS_REJECTED = "rejected"
 
+import os
+
 # backend/app/core/constants.py -> backend/
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 FRAMEWORKS_DIR = BACKEND_DIR / "frameworks"
 
-UPLOAD_DIR = BACKEND_DIR / "uploads"
+# Where uploaded scan reports are stored. Env-configurable so the path
+# can point at a mounted volume in a container (and, as a stepping stone
+# to object storage, live outside the app image). Defaults to
+# backend/uploads for local dev.
+UPLOAD_DIR = Path(
+    os.environ.get("UPLOAD_DIR", str(BACKEND_DIR / "uploads"))
+)

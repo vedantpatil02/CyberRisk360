@@ -1,3 +1,42 @@
+## v0.8-alpha1
+
+### Added
+- **Liveness/readiness probes**: `GET /health` (process up, no deps) and
+  `GET /ready` (database reachable **and** schema migrated to Alembic
+  head, else 503 with detail). The readiness migration check turns the
+  previously-opaque "no such table" 500 on a behind-head database into a
+  clear signal to run `alembic upgrade head`. Both unauthenticated.
+- **Pagination, filtering, and sorting** on the list endpoints
+  (`/vulnerabilities`, `/assets`, `/risks`) - one scan import can be
+  thousands of findings. `limit`/`offset`, entity-appropriate filters
+  (e.g. `severity`/`status`/`asset_id` for vulnerabilities), and
+  allowlisted `sort_by` + `order`. Opt-in: with no query params the
+  endpoints still return everything, so the existing contract is
+  unchanged. (Audit log already had this from Phase 2.)
+- **Structured logging** (`app/core/logging.py`): a dedicated
+  `cyberrisk360` logger namespace with console or `LOG_FORMAT=json`
+  output, and a request-logging middleware that emits method/path/
+  status/duration/client-IP per request and sets an `X-Request-ID`
+  correlation header (echoing an inbound one if present). Replaced the
+  `traceback.print_exc()` calls in the import endpoint with
+  `logger.exception`.
+- **Configurable client-IP resolution** (`app/core/net.py`): a single
+  `get_client_ip` used by both rate limiting and the audit trail. Honors
+  `X-Forwarded-For` only when `TRUST_PROXY_HEADERS` is enabled (behind a
+  trusted proxy), otherwise the socket peer - closing the "everything
+  looks like it comes from the proxy IP" gap noted in TODO.md.
+- `UPLOAD_DIR` is now env-configurable (mount a volume / step toward
+  externalized storage); `LOG_LEVEL`/`LOG_FORMAT`/`TRUST_PROXY_HEADERS`
+  documented in `.env.example`.
+- New tests: `test_health.py`, `test_list_pagination.py`,
+  `test_observability.py`. 133 -> 149 tests.
+
+### Deferred (need external infra, tracked in ROADMAP.md Phase 3)
+- Object-storage (S3-compatible) backend for uploads and a Redis-backed
+  rate-limit store for multi-replica deployments. Config surfaces exist
+  (`UPLOAD_DIR`, the single rate-limiter definition); the backends land
+  when that infra is available to build against.
+
 ## v0.7-alpha3
 
 ### Added

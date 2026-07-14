@@ -1,7 +1,10 @@
+from typing import Optional
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Request
+from fastapi import Query
 
 from sqlalchemy.orm import Session
 
@@ -18,6 +21,7 @@ from app.analytics.risk_summary import initialize_summary
 
 from app.repositories.risks.risk_repository import (
     get_all_risks as db_get_all_risks,
+    query_risks as db_query_risks,
     get_risk as db_get_risk,
     create_risk as db_create_risk,
     update_risk as db_update_risk
@@ -130,6 +134,14 @@ def generate_risks(
 
 @router.get("/risks")
 def get_risks(
+    limit: Optional[int] = Query(None, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    risk_level: Optional[str] = None,
+    status: Optional[str] = None,
+    source: Optional[str] = None,
+    asset_id: Optional[int] = None,
+    sort_by: str = Query("id"),
+    order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user=Depends(
         require_role(
@@ -140,10 +152,22 @@ def get_risks(
     )
 ):
     """
-    Retrieve all risks.
+    List risks. Optional `risk_level`/`status`/`source`/`asset_id`
+    filters, `sort_by` + `order`, and `limit`/`offset` pagination. With
+    no parameters, returns all risks.
     """
 
-    return db_get_all_risks(db)
+    return db_query_risks(
+        db,
+        limit=limit,
+        offset=offset,
+        risk_level=risk_level,
+        status=status,
+        source=source,
+        asset_id=asset_id,
+        sort_by=sort_by,
+        order=order,
+    )
 
 @router.get("/risks/{risk_id}")
 def get_risk(
