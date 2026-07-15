@@ -75,8 +75,15 @@ sequenced after the foundations are stable.
 - ✅ Platform super-admin spanning all orgs + org management API
 - ✅ Migration with default-org backfill (verified fwd/reverse); 149 →
   156 tests incl. cross-org isolation
-- ⬜ Follow-ups: per-org control implementation status (join table);
-  a bootstrap flow for the first super-admin
+- ✅ `scripts/bootstrap_super_admin.py`: idempotent super-admin
+  provisioning (create-or-`--force`-reset), configurable via
+  `SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_USERNAME`/`SUPER_ADMIN_PASSWORD`/
+  `SUPER_ADMIN_ORG_SLUG`, generates and prints a random password when
+  none is supplied. Deliberately separate from `bootstrap_database.py`/
+  `docker-entrypoint.sh` — provisioning a privileged account is a
+  manual operator action, not something to run silently on every
+  container start
+- ⬜ Follow-up: per-org control implementation status (join table)
 
 ## Phase 5 — Workflow, integrations, enrichment 🚧
 
