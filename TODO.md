@@ -147,6 +147,24 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       /vulnerabilities/{id}/enrich-cve` to backfill vulnerabilities
       imported before this existed. Migration `7269075996ec`, verified
       to round-trip cleanly. See `ROADMAP.md` Phase 5. 178 → 196 tests
+- [x] Phase 6 (partial) - first frontend slice. `frontend/` scaffolded
+      from an empty directory (Vite + React + TypeScript + MUI +
+      TanStack Query + React Router - no Node tooling existed before
+      this). Form-encoded login (matches the backend's
+      `OAuth2PasswordRequestForm`), JWT decoded client-side for
+      role/org (no `/me` round trip needed), `sessionStorage` (no
+      refresh-token endpoint exists, so nothing is gained by
+      localStorage), a role-gated nav shell, `GET /dashboard/overview`,
+      and a full Vulnerabilities list+detail view with a generic
+      `DataTable` built against the API's bare-array/no-total-count
+      pagination convention (`limit = pageSize + 1` to derive
+      `hasNextPage`) - the piece Assets/Risks reuse unchanged next.
+      Verified end-to-end in real headless Chromium against the
+      running backend, including the RBAC edge cases: nav-gating,
+      in-place "Access denied" (not a crash/logout) for a
+      permitted-but-restricted route, and an invalid/expired token
+      correctly redirecting to `/login`. See `ROADMAP.md` Phase 6 and
+      `frontend/README.md`
 
 ## Next up
 

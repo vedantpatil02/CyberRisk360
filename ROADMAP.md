@@ -115,10 +115,27 @@ sequenced after the foundations are stable.
   sourced from the actual standards, not fabricated)
 - ⬜ SSO (SAML/OIDC) — needs an IdP to integrate against
 
-## Phase 6 — Frontend ⬜
+## Phase 6 — Frontend 🚧
 
-- ⬜ React application consuming the API (design-doc v0.9). Largest single
-  effort; unblocks every non-technical persona.
+- ✅ First slice: `frontend/` scaffolded from nothing (Vite + React +
+  TypeScript + MUI + TanStack Query + React Router — zero Node tooling
+  existed before this). Auth (form-encoded `POST /login`, JWT decoded
+  client-side for role/org, `sessionStorage`, no refresh token so a
+  hard re-login on the fixed 60-min expiry), a role-gated nav shell,
+  the `/dashboard/overview` page, and a full Vulnerabilities
+  list+detail view exercising a generic paginated/sortable/filterable
+  `DataTable` (built against the API's bare-array/no-total-count list
+  convention) that Risks/Assets will reuse unchanged. Verified
+  end-to-end in a real headless-Chromium session against the running
+  backend: login, dashboard, sort/filter/paginate, detail + mapped
+  controls, logout, RBAC nav-gating + in-place "Access denied" for a
+  restricted role hitting a route directly (not a crash, not a
+  logout), and an invalid/expired token correctly redirecting to
+  `/login`. Needs `CORS_ALLOWED_ORIGINS=http://localhost:5173` in the
+  repo-root `.env` for local dev (see `frontend/README.md`)
+- ⬜ Remaining resources: Assets, Risks, Controls/Frameworks, Reports,
+  Imports, Evidence, Admin/Org management — each follows the same
+  DataTable/hook/page pattern the Vulnerabilities slice established
 
 ---
 
@@ -126,5 +143,7 @@ sequenced after the foundations are stable.
 (remaining: object storage + Redis, both blocked on external infra).
 Phase 5: remediation workflow + CVE enrichment done; notifications,
 scheduled imports, additional frameworks, and SSO remain (each needs
-infra/credentials/source data beyond this codebase). Next: the rest of
-Phase 5, or Phase 6 (frontend).
+infra/credentials/source data beyond this codebase). Phase 6: first
+frontend slice (auth/dashboard/vulnerabilities) done; the remaining
+resources are follow-up iterations of the same pattern. Next: the rest
+of Phase 5, or the rest of Phase 6.
