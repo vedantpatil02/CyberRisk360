@@ -9,8 +9,11 @@ associated business impact.
 from sqlalchemy import Column
 from sqlalchemy import Integer
 from sqlalchemy import String
+from sqlalchemy import DateTime
 from sqlalchemy import ForeignKey
 from sqlalchemy import text
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.database import Base
 
@@ -97,4 +100,42 @@ class Risk(Base):
         ForeignKey("organizations.id"),
         nullable=False,
         index=True
+    )
+
+    # User accountable for treatment. Distinct from `owner` above,
+    # which is free text (e.g. an asset's owner label) - assignee_id
+    # is a real user reference.
+    assignee_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+        index=True
+    )
+
+    # SLA due date, computed once at creation from risk_level and
+    # never silently recomputed on a later edit.
+    due_date = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    assignee = relationship("User", foreign_keys=[assignee_id])
+
+    evidence = relationship(
+        "EvidenceAttachment",
+        back_populates="risk",
+        cascade="all, delete-orphan"
     )

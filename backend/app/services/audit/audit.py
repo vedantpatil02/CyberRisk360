@@ -25,6 +25,8 @@ ACTION_IMPORT_UPLOAD = "import.upload"
 ACTION_MAPPING_APPROVE = "mapping.approve"
 ACTION_MAPPING_REJECT = "mapping.reject"
 ACTION_RISK_GENERATE = "risk.generate"
+ACTION_VULNERABILITY_ASSIGN = "vulnerability.assign"
+ACTION_RISK_ASSIGN = "risk.assign"
 
 ANONYMOUS_ACTOR = "anonymous"
 SYSTEM_ACTOR = "system"

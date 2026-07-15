@@ -12,6 +12,9 @@ from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Query
+from fastapi import Request
+from fastapi import UploadFile
+from fastapi import File
 
 from sqlalchemy.orm import Session
 
@@ -37,6 +40,8 @@ from app.core.constants import (
     ROLE_ADMIN,
     ROLE_ANALYST,
     ROLE_AUDITOR,
+    WRITE_ROLES,
+    READ_ROLES,
     VULNERABILITY_STATUS_OPEN,
     VULNERABILITY_STATUS_CLOSED
 )
@@ -61,6 +66,9 @@ from app.services.vulnerabilities.vulnerability_summary import (
     get_top_critical_vulnerabilities
 )
 
+from app.services.remediation.sla import compute_due_date
+from app.services.remediation.evidence import save_evidence, serialize_evidence
+
 from app.repositories.vulnerabilities.vulnerability_repository import (
     get_all_vulnerabilities,
     query_vulnerabilities,
@@ -78,12 +86,41 @@ from app.repositories.assets.asset_repository import (
 from app.repositories.risks.risk_repository import (
     get_risk
 )
+from app.repositories.users.user_repository import (
+    get_by_id_in_org,
+    get_by_email
+)
+from app.repositories.remediation.evidence_repository import (
+    list_by_vulnerability
+)
 from app.services.mapping.mapping_engine import (
     map_vulnerability_to_controls
+)
+from app.services.audit.audit import (
+    record_audit,
+    client_ip,
+    ACTION_VULNERABILITY_ASSIGN
 )
 
 
 router = APIRouter()
+
+
+def _validate_assignee(db, assignee_id, scope):
+    """
+    404 (not 403) on a nonexistent or cross-org assignee_id, so a
+    cross-org user id isn't confirmed to exist - same convention as
+    app/api/users.py::_get_managed_user.
+    """
+
+    if assignee_id is None:
+        return
+
+    if not get_by_id_in_org(db, assignee_id, org_id=scope):
+        raise HTTPException(
+            status_code=404,
+            detail="Assignee not found"
+        )
 
 
 @router.post("/vulnerabilities")
@@ -126,6 +163,8 @@ def create_vulnerability(
             detail="Risk not found"
         )
 
+    _validate_assignee(db, vulnerability.assignee_id, scope)
+
     severity = calculate_severity(
         vulnerability.cvss_score
     )
@@ -140,6 +179,8 @@ def create_vulnerability(
         severity=severity,
         owner=vulnerability.owner,
         status=VULNERABILITY_STATUS_OPEN,
+        assignee_id=vulnerability.assignee_id,
+        due_date=vulnerability.due_date or compute_due_date(severity),
         org_id=org_id
     )
 
@@ -167,6 +208,8 @@ def get_vulnerabilities(
     severity: Optional[str] = None,
     status: Optional[str] = None,
     asset_id: Optional[int] = None,
+    assignee_id: Optional[int] = None,
+    sla_breached: Optional[bool] = None,
     sort_by: str = Query("id"),
     order: str = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
@@ -182,9 +225,10 @@ def get_vulnerabilities(
     """
     List vulnerabilities (scoped to the caller's organization).
 
-    Optional `severity`/`status`/`asset_id` filters, `sort_by`
-    (id/title/severity/cvss_score/status) + `order` (asc/desc), and
-    `limit`/`offset` pagination.
+    Optional `severity`/`status`/`asset_id`/`assignee_id`/
+    `sla_breached` filters, `sort_by`
+    (id/title/severity/cvss_score/status/due_date/assignee_id) +
+    `order` (asc/desc), and `limit`/`offset` pagination.
     """
 
     return query_vulnerabilities(
@@ -195,6 +239,8 @@ def get_vulnerabilities(
         severity=severity,
         status=status,
         asset_id=asset_id,
+        assignee_id=assignee_id,
+        sla_breached=sla_breached,
         sort_by=sort_by,
         order=order,
     )
@@ -257,6 +303,7 @@ def get_vulnerability(
 def update_vulnerability(
     vulnerability_id: int,
     vulnerability_update: VulnerabilityUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     scope=Depends(org_scope),
     current_user=Depends(
@@ -301,7 +348,9 @@ def update_vulnerability(
         )
     )
 
-    # Recalculate severity
+    # Recalculate severity. Deliberately does NOT touch due_date - an
+    # SLA due date is a commitment set at creation, not a floating
+    # derivation that shifts every time severity is rescored.
     if (
         vulnerability_update.cvss_score
         is not None
@@ -313,7 +362,22 @@ def update_vulnerability(
             )
         )
 
+    if "assignee_id" in update_data:
+        _validate_assignee(db, update_data["assignee_id"], scope)
+
     db_update_vulnerability(db, vulnerability, update_data)
+
+    if "assignee_id" in update_data:
+        record_audit(
+            db,
+            action=ACTION_VULNERABILITY_ASSIGN,
+            actor=current_user.get("sub"),
+            entity_type="vulnerability",
+            entity_id=vulnerability_id,
+            ip_address=client_ip(request),
+            detail=f"assignee_id={update_data['assignee_id']}",
+            org_id=scope,
+        )
 
     return {
         "message":
@@ -499,3 +563,67 @@ def get_vulnerability_controls(
         )
 
     return results
+
+
+@router.post(
+    "/vulnerabilities/{vulnerability_id}/evidence"
+)
+def upload_vulnerability_evidence(
+    vulnerability_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(require_role(*WRITE_ROLES))
+):
+    """
+    Upload a remediation-evidence file for a vulnerability.
+    """
+
+    if not db_get_vulnerability(db, vulnerability_id, org_id=scope):
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
+
+    uploader = get_by_email(db, current_user["sub"])
+
+    if uploader is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        attachment = save_evidence(
+            db,
+            file=file,
+            uploaded_by_id=uploader.id,
+            org_id=scope,
+            vulnerability_id=vulnerability_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return serialize_evidence(attachment)
+
+
+@router.get(
+    "/vulnerabilities/{vulnerability_id}/evidence"
+)
+def get_vulnerability_evidence(
+    vulnerability_id: int,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(require_role(*READ_ROLES))
+):
+    """
+    List evidence attachments for a vulnerability.
+    """
+
+    if not db_get_vulnerability(db, vulnerability_id, org_id=scope):
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
+
+    return [
+        serialize_evidence(a)
+        for a in list_by_vulnerability(db, vulnerability_id, org_id=scope)
+    ]

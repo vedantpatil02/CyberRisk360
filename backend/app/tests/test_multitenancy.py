@@ -146,6 +146,41 @@ def test_org_api_requires_super_admin(client, as_user):
     assert client.get("/organizations").status_code == 403
 
 
+def test_assignee_id_across_orgs_is_isolated(client, db_session, as_user):
+    """
+    An assignee_id must belong to the same org as the vulnerability -
+    a user id that exists, but in another org, is a 404 (not treated
+    as a valid cross-org assignment).
+    """
+    from app.repositories.users.user_repository import create_user
+
+    _make_org2(db_session)
+    org2_user = create_user(
+        db_session, username="org2user", email="org2user@example.com",
+        password="x", role=ROLE_ADMIN, org_id=ORG2,
+    )
+
+    as_user(role=ROLE_ADMIN, org_id=ORG1)
+    a1 = _asset(db_session, ORG1, "10.0.0.9")
+    db_session.commit()
+
+    risk_response = client.post("/risks", json={
+        "title": "r", "description": "d", "asset_id": a1.id,
+        "impact": 3, "likelihood": 3, "owner": "IT",
+    })
+    assert risk_response.status_code == 200
+    risk_id = client.get("/risks").json()[-1]["id"]
+
+    response = client.post("/vulnerabilities", json={
+        "title": "t", "description": "d", "asset_id": a1.id,
+        "risk_id": risk_id, "cvss_score": 5.0, "owner": "IT",
+        "assignee_id": org2_user.id,
+    })
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Assignee not found"}
+
+
 def test_super_admin_can_create_and_list_orgs(client, db_session, as_user):
     as_user(role=ROLE_SUPER_ADMIN, org_id=ORG1)
 

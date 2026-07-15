@@ -9,6 +9,7 @@ because users may update only specific
 attributes of a risk.
 """
 
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -36,3 +37,9 @@ class RiskUpdate(BaseModel):
 
     # Updated risk status
     status: Optional[str] = None
+
+    # Updated assignee (real user reference)
+    assignee_id: Optional[int] = None
+
+    # Updated SLA due date
+    due_date: Optional[datetime] = None

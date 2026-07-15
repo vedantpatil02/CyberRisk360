@@ -129,6 +129,14 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       semantic role groups. Migrations `dd92d089fdb0` + `cf7f92f27fe3`
       (batch_alter_table for the SQLite CURRENT_TIMESTAMP default). See
       `ROADMAP.md` Phase 2. 103 → 125 tests
+- [x] Phase 5 (partial) - remediation workflow. `assignee_id` (real
+      `User` FK, validated same-org) and `due_date`/SLA (fixed
+      hours-per-severity, computed once at creation, never reshifted
+      by a later edit; a stateless `sla_breached` query filter) on
+      vulnerabilities and risks, plus a new `evidence_attachments`
+      table with upload/list/download/delete endpoints reusing the
+      `UPLOAD_DIR` convention. Migration `87367710486c`, verified to
+      round-trip cleanly. See `ROADMAP.md` Phase 5. 156 → 178 tests
 
 ## Next up
 

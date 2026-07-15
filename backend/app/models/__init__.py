@@ -10,3 +10,4 @@ from app.models.vulnerability_control_mapping import VulnerabilityControlMapping
 from app.models.mapping_history import MappingHistory
 from app.models.plugin_enrichment_cache import PluginEnrichmentCache
 from app.models.audit_log import AuditLog
+from app.models.evidence_attachment import EvidenceAttachment

@@ -29,6 +29,25 @@ def get_by_id(
     )
 
 
+def get_by_id_in_org(
+    db: Session,
+    user_id: int,
+    org_id: int = None
+):
+    """
+    Org-scoped user lookup. `org_id=None` = no restriction (super-admin).
+    Used to validate an assignee_id belongs to the caller's org before
+    it's attached to a vulnerability/risk.
+    """
+
+    query = db.query(User).filter(User.id == user_id)
+
+    if org_id is not None:
+        query = query.filter(User.org_id == org_id)
+
+    return query.first()
+
+
 def create_user(
     db: Session,
     username: str,

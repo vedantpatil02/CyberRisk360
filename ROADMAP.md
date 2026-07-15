@@ -78,15 +78,28 @@ sequenced after the foundations are stable.
 - ⬜ Follow-ups: per-org control implementation status (join table);
   a bootstrap flow for the first super-admin
 
-## Phase 5 — Workflow, integrations, enrichment ⬜
+## Phase 5 — Workflow, integrations, enrichment 🚧
 
-- ⬜ Remediation workflow: assignee, due date, SLA, evidence attachments
+- ✅ Remediation workflow: `assignee_id` (real `User` FK, validated
+  same-org via a 404-on-cross-org check), `due_date`/SLA (fixed
+  hours-per-severity, computed once at creation, never silently
+  reshifted on a later edit; a stateless `sla_breached` filter on the
+  list endpoints), and evidence attachments (`evidence_attachments`
+  table + `POST/GET .../evidence` + `GET/DELETE /evidence/{id}`,
+  reusing the `UPLOAD_DIR` convention). `owner` (free text) is kept
+  alongside `assignee_id`, not replaced — it holds non-user values
+  (`"Imported"`, an asset's owner label) that don't map to a real
+  account. 178 tests (was 156)
 - ⬜ CVE enrichment (`cve_enrichment.py` is a no-op today) via NVD lookup
-- ⬜ Notifications (email/webhook): new criticals, SLA breach, import done
-- ⬜ Scheduled / API-based imports (Nessus/OpenVAS APIs)
+- ⬜ Notifications (email/webhook): new criticals, SLA breach, import
+  done — needs a background-job mechanism (no Celery/APScheduler in
+  this codebase yet) and a notification target (SMTP/webhook)
+- ⬜ Scheduled / API-based imports (Nessus/OpenVAS APIs) — needs
+  external API credentials
 - ⬜ Additional frameworks: PCI DSS, SOC 2, HIPAA, NIST SP 800-53
-  (pure data — no code changes required)
-- ⬜ SSO (SAML/OIDC)
+  (pure data — no code changes required, but needs real control text
+  sourced from the actual standards, not fabricated)
+- ⬜ SSO (SAML/OIDC) — needs an IdP to integrate against
 
 ## Phase 6 — Frontend ⬜
 
@@ -97,4 +110,6 @@ sequenced after the foundations are stable.
 
 **Current focus:** Phases 1, 2 & 4 complete; Phase 3 largely done
 (remaining: object storage + Redis, both blocked on external infra).
-Next: Phase 5 (workflow/integrations) or Phase 6 (frontend).
+Phase 5: remediation workflow done; CVE enrichment, notifications,
+scheduled imports, additional frameworks, and SSO remain. Next: the
+rest of Phase 5, or Phase 6 (frontend).

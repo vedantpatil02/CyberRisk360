@@ -1,7 +1,10 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.risk import Risk
+from app.services.remediation.sla import RISK_TERMINAL_STATUSES
 
 
 RISK_SORT_COLUMNS = {
@@ -9,6 +12,8 @@ RISK_SORT_COLUMNS = {
     "risk_score": Risk.risk_score,
     "risk_level": Risk.risk_level,
     "status": Risk.status,
+    "due_date": Risk.due_date,
+    "assignee_id": Risk.assignee_id,
 }
 
 
@@ -42,6 +47,8 @@ def query_risks(
     status: str = None,
     source: str = None,
     asset_id: int = None,
+    assignee_id: int = None,
+    sla_breached: bool = None,
     sort_by: str = "id",
     order: str = "asc",
 ):
@@ -67,6 +74,22 @@ def query_risks(
 
     if asset_id is not None:
         query = query.filter(Risk.asset_id == asset_id)
+
+    if assignee_id is not None:
+        query = query.filter(Risk.assignee_id == assignee_id)
+
+    if sla_breached is not None:
+        # Breached: has a due_date in the past and hasn't reached a
+        # terminal status. Computed at query time (never stored) - see
+        # services/remediation/sla.py.
+        breach_condition = (
+            Risk.due_date.isnot(None)
+            & (Risk.due_date < datetime.now(timezone.utc))
+            & Risk.status.notin_(RISK_TERMINAL_STATUSES)
+        )
+        query = query.filter(
+            breach_condition if sla_breached else ~breach_condition
+        )
 
     column = RISK_SORT_COLUMNS.get(sort_by, Risk.id)
     query = query.order_by(

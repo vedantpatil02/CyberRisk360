@@ -27,6 +27,7 @@ from app.services.risks.risk import (
     calculate_risk_score,
     calculate_risk_level,
 )
+from app.services.remediation.sla import compute_due_date
 
 
 DEFAULT_OWNER = "Unassigned"
@@ -132,7 +133,10 @@ def generate_risk_for_asset(db, asset, commit: bool = True):
     existing = get_auto_risk_by_asset(db, asset.id, org_id=asset.org_id)
 
     if existing:
-        # Don't clobber a manually-set treatment status (e.g. Accepted).
+        # Don't clobber a manually-set treatment status (e.g.
+        # Accepted), and don't reset the SLA clock on a re-run -
+        # due_date is deliberately excluded from `fields` and only
+        # ever set once, at creation.
         risk = update_risk(db, existing, fields)
     else:
         risk = create_risk(
@@ -140,6 +144,7 @@ def generate_risk_for_asset(db, asset, commit: bool = True):
             asset_id=asset.id,
             source="auto",
             org_id=asset.org_id,
+            due_date=compute_due_date(level),
             **fields,
         )
 
