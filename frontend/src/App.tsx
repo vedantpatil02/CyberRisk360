@@ -6,7 +6,10 @@ import { DashboardPage } from './pages/DashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { VulnerabilitiesListPage } from './pages/vulnerabilities/VulnerabilitiesListPage';
 import { VulnerabilityDetailPage } from './pages/vulnerabilities/VulnerabilityDetailPage';
+import { AssetsListPage } from './pages/assets/AssetsListPage';
+import { AssetDetailPage } from './pages/assets/AssetDetailPage';
 import { VULNERABILITY_READ_ROLES } from './api/endpoints/vulnerabilities';
+import { ASSET_DETAIL_READ_ROLES } from './api/endpoints/assets';
 
 export function App() {
   return (
@@ -36,6 +39,20 @@ export function App() {
           element={
             <ProtectedRoute roles={VULNERABILITY_READ_ROLES}>
               <VulnerabilityDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* GET /assets has no role check at all - any authenticated
+            user - but its detail endpoints (summary/vulnerabilities)
+            require ASSET_DETAIL_READ_ROLES, so only the detail route
+            is role-gated here. */}
+        <Route path="/assets" element={<AssetsListPage />} />
+        <Route
+          path="/assets/:id"
+          element={
+            <ProtectedRoute roles={ASSET_DETAIL_READ_ROLES}>
+              <AssetDetailPage />
             </ProtectedRoute>
           }
         />

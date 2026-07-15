@@ -165,6 +165,16 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       permitted-but-restricted route, and an invalid/expired token
       correctly redirecting to `/login`. See `ROADMAP.md` Phase 6 and
       `frontend/README.md`
+- [x] Phase 6 (partial) - Assets list + detail, reusing the
+      `DataTable`/hook/page pattern unchanged - confirms it
+      generalizes to a resource whose list and detail endpoints sit at
+      *different* RBAC tiers (`GET /assets` ungated, `.../summary` and
+      `.../vulnerabilities` require admin/analyst/auditor). Detail view
+      is necessarily partial (severity breakdown + vulnerability list
+      only) since there's no `GET /assets/{id}` on the backend to
+      fetch the asset's own fields by id - a real, documented gap, not
+      papered over. Verified end-to-end incl. the 404 state. See
+      `ROADMAP.md` Phase 6
 
 ## Next up
 

@@ -143,9 +143,19 @@ sequenced after the foundations are stable.
   logout), and an invalid/expired token correctly redirecting to
   `/login`. Needs `CORS_ALLOWED_ORIGINS=http://localhost:5173` in the
   repo-root `.env` for local dev (see `frontend/README.md`)
-- ⬜ Remaining resources: Assets, Risks, Controls/Frameworks, Reports,
-  Imports, Evidence, Admin/Org management — each follows the same
-  DataTable/hook/page pattern the Vulnerabilities slice established
+- ✅ Assets list + detail, reusing the `DataTable`/hook/page pattern
+  unchanged. Confirms the pattern generalizes to per-endpoint RBAC
+  that differs *within* one resource: `GET /assets` has no role check
+  at all (list route ungated), but `GET /assets/{id}/summary` and
+  `.../vulnerabilities` require `admin`/`analyst`/`auditor` (detail
+  route gated) — the two aren't the same tier. Detail view is
+  necessarily partial: there's no `GET /assets/{id}` on the backend,
+  so it shows the severity breakdown + vulnerability list from the
+  summary/vulnerabilities endpoints, not the asset's own fields
+  (owner/criticality/IP/environment — visible only from the list).
+  Verified end-to-end incl. the 404 state for a nonexistent asset
+- ⬜ Remaining resources: Risks, Controls/Frameworks, Reports, Imports,
+  Evidence, Admin/Org management — each follows the same pattern
 
 ---
 

@@ -1,6 +1,7 @@
 import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BugReportIcon from '@mui/icons-material/BugReport';
+import StorageIcon from '@mui/icons-material/Storage';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { hasRole } from '../api/types/auth';
@@ -35,6 +36,15 @@ export function NavDrawer() {
       path: '/vulnerabilities',
       icon: <BugReportIcon />,
       visible: user !== null && hasRole(user.role, VULNERABILITY_READ_ROLES),
+    },
+    {
+      label: 'Assets',
+      path: '/assets',
+      icon: <StorageIcon />,
+      // GET /assets has no role check at all - visible to any
+      // authenticated user (its detail view is separately role-gated
+      // in App.tsx via ASSET_DETAIL_READ_ROLES).
+      visible: true,
     },
   ];
 
