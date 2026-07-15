@@ -51,9 +51,9 @@ def test_gap_analysis_ignores_pending_mappings(db_session):
     affected_ids = {c["control_id"] for c in gaps["affected_controls"]}
     unaffected_ids = {c["control_id"] for c in gaps["unaffected_controls"]}
 
-    # PR.AC-1 is one of the controls the "ssh" keyword rule maps to
-    assert "PR.AC-1" in unaffected_ids
-    assert "PR.AC-1" not in affected_ids
+    # PR.AA-01 is one of the controls the "ssh" keyword rule maps to
+    assert "PR.AA-01" in unaffected_ids
+    assert "PR.AA-01" not in affected_ids
 
 
 def test_gap_analysis_counts_mapping_once_approved(db_session):
@@ -65,7 +65,7 @@ def test_gap_analysis_counts_mapping_once_approved(db_session):
     gaps = get_framework_gaps(db_session, "nist-csf")
     affected_ids = {c["control_id"] for c in gaps["affected_controls"]}
 
-    assert "PR.AC-1" in affected_ids
+    assert "PR.AA-01" in affected_ids
 
 
 def test_control_risk_analysis_ignores_pending_mappings(db_session):
@@ -73,10 +73,10 @@ def test_control_risk_analysis_ignores_pending_mappings(db_session):
 
     analysis = get_control_risk_analysis(db_session, "nist-csf")
 
-    pr_ac_1 = next(c for c in analysis["controls"] if c["control_id"] == "PR.AC-1")
+    pr_aa_01 = next(c for c in analysis["controls"] if c["control_id"] == "PR.AA-01")
 
-    assert pr_ac_1["risk_score"] == 0
-    assert pr_ac_1["affected_vulnerabilities"] == 0
+    assert pr_aa_01["risk_score"] == 0
+    assert pr_aa_01["affected_vulnerabilities"] == 0
 
 
 def test_control_risk_analysis_reflects_approved_mapping(db_session):
@@ -87,10 +87,10 @@ def test_control_risk_analysis_reflects_approved_mapping(db_session):
 
     analysis = get_control_risk_analysis(db_session, "nist-csf")
 
-    pr_ac_1 = next(c for c in analysis["controls"] if c["control_id"] == "PR.AC-1")
+    pr_aa_01 = next(c for c in analysis["controls"] if c["control_id"] == "PR.AA-01")
 
-    assert pr_ac_1["risk_score"] > 0
-    assert pr_ac_1["high"] == 1
+    assert pr_aa_01["risk_score"] > 0
+    assert pr_aa_01["high"] == 1
 
 
 def test_framework_summary_endpoint_ignores_pending_mappings(client, db_session):

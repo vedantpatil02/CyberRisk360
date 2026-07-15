@@ -1,8 +1,8 @@
 {
     "name": "OWASP Application Security Verification Standard",
     "short_name": "owasp-asvs",
-    "version": "4.0.3",
+    "version": "5.0.0",
     "publisher": "OWASP Foundation",
     "description": "A framework of security requirements and controls used to define, build, and test technical application security controls.",
-    "release_year": 2021
+    "release_year": 2025
 }

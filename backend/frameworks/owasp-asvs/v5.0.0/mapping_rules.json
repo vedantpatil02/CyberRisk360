@@ -1,0 +1,24 @@
+{
+    "cve": {
+        "CVE-2021-44228": ["V1.2.1"],
+        "CVE-2017-5638": ["V1.2.1"]
+    },
+    "cwe": {
+        "CWE-79": ["V1.2.1"],
+        "CWE-89": ["V1.2.1"],
+        "CWE-20": ["V2.1.1"],
+        "CWE-287": ["V6.1.1"],
+        "CWE-521": ["V6.1.1"],
+        "CWE-798": ["V6.1.1"]
+    },
+    "plugin_id": {},
+    "keyword": {
+        "sql injection": ["V1.2.1"],
+        "cross-site scripting": ["V1.2.1"],
+        "input validation": ["V2.1.1"],
+        "authentication": ["V6.1.1"],
+        "login": ["V6.1.1"],
+        "session": ["V7.1.1"],
+        "password": ["V6.1.1"]
+    }
+}

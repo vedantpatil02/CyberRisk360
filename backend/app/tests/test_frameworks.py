@@ -148,8 +148,8 @@ def test_import_framework_derives_multiple_categories_generically(db_session):
     """
     The importer must not collapse every control into a single
     catch-all category — it should derive distinct category codes
-    from control_id structure (e.g. NIST's "PR.AC-1"/"PR.AC-3" share
-    a "PR.AC" category, but different prefixes get different ones).
+    from control_id structure (e.g. NIST's "PR.AA-01"/"PR.AA-05" share
+    a "PR.AA" category, but different prefixes get different ones).
     """
 
     discovered = discover_frameworks(FRAMEWORKS_DIR)
@@ -165,7 +165,7 @@ def test_import_framework_derives_multiple_categories_generically(db_session):
 
     assert len(categories) > 1
     assert "GENERAL" not in category_codes
-    assert {"PR.AC", "ID.AM"} <= category_codes
+    assert {"PR.AA", "ID.AM"} <= category_codes
 
 
 def test_bootstrap_imported_frameworks_are_exposed_via_api(client, db_session):

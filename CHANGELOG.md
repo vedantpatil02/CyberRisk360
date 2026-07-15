@@ -1,3 +1,50 @@
+## Unreleased
+
+### Added
+- **Complete, officially-sourced control data** for 3 of the 5
+  compliance frameworks, replacing 2-10 item placeholder samples:
+  - **NIST CSF 2.0**: all 106 subcategories across 22 categories/6
+    functions (was 10, missing the entire GOVERN function), sourced
+    from NIST's own public-domain OSCAL catalog
+    (`usnistgov/oscal-content`), including official Implementation
+    Example text where NIST provides it (`implementation_guidance`).
+    Filtered out ~38 CSF-1.1-era categories/subcategories the source
+    file bundles as a withdrawn crosswalk (e.g. legacy `PR.AC`,
+    superseded by `PR.AA` in 2.0) - importing them unfiltered would
+    have silently doubled the category count with dead 1.1 codes.
+  - **OWASP ASVS**: upgraded `v4.0.3` -> **`v5.0.0`** (345
+    requirements across 17 chapters, was 2), sourced from OWASP's
+    official CSV (CC BY-SA 4.0), including the official Level
+    (`priority`: L1/L2/L3) per requirement.
+  - **OWASP Top 10 2021**: descriptions replaced with verbatim
+    official text (from each category's own `## Description` section,
+    CC BY-SA 4.0) - control IDs/titles were already correct; only the
+    prior paraphrased descriptions changed.
+  - `framework_importer.py`: additive, backward-compatible support
+    for optional `priority`/`implementation_guidance` fields on a
+    control (existing schema columns, previously always unset).
+- 197 -> 198 tests (one assertion updated for NIST 2.0's real category
+  codes - see Fixed).
+
+### Fixed
+- `mapping_rules.json` for `nist-csf` and `owasp-asvs` retargeted from
+  placeholder-era control IDs (`PR.AC-1`, bare `V5`/`V2`) to real ones
+  in the new datasets (`PR.AA-01`, `V1.2.1`, etc.) - the old IDs no
+  longer exist as real controls, which would have silently stopped
+  vulnerability-to-control auto-mapping for both frameworks.
+- `test_frameworks.py`/`test_mapping_engine.py`/
+  `test_mapping_status_analytics.py`: updated hardcoded old-format
+  NIST IDs (`PR.AC-1` -> `PR.AA-01`, `ID.RA-1` -> `ID.RA-01`) to match.
+
+### Not done - blocked on licensing (reported, not fabricated)
+- **CIS Controls v8**: still the 2-item placeholder. Licensed CC
+  BY-**NC**-**ND** 4.0 - the No-Derivatives clause explicitly
+  prohibits distributing a modified/transformed version, which is
+  exactly what importing into this DB's schema would be.
+- **ISO/IEC 27001:2022 Annex A**: still the 2-item placeholder. Full
+  copyright, no redistribution license identified for the standard's
+  control text.
+
 ## v0.9-alpha1
 
 ### Added

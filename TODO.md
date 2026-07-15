@@ -175,6 +175,21 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       fetch the asset's own fields by id - a real, documented gap, not
       papered over. Verified end-to-end incl. the 404 state. See
       `ROADMAP.md` Phase 6
+- [x] Populated 3 of the 5 compliance frameworks with complete,
+      officially-sourced control data (were 2-10 item placeholder
+      samples): NIST CSF 2.0 (106 subcategories, public domain, from
+      NIST's own OSCAL catalog - filtered out ~38 withdrawn CSF-1.1
+      crosswalk entries the source bundles alongside the real 2.0
+      data), OWASP ASVS upgraded v4.0.3 → v5.0.0 (345 requirements,
+      CC BY-SA), OWASP Top 10 2021 (verbatim official descriptions,
+      CC BY-SA). `mapping_rules.json` for both retargeted to real
+      control IDs (old placeholder IDs like `PR.AC-1`/bare `V5` don't
+      exist in the new datasets). CIS Controls v8 and ISO/IEC
+      27001:2022 deliberately left as 2-item placeholders and NOT
+      populated - see `CHANGELOG.md` for the specific licensing
+      blocker per framework (CIS: CC BY-NC-ND's No-Derivatives clause;
+      ISO: full copyright, no redistribution rights found). 197 → 198
+      tests.
 
 ## Next up
 

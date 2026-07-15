@@ -87,13 +87,29 @@ def import_framework(
             category_code
         )
 
-        new_control = Control(
-            control_id=control["control_id"],
-            title=control["name"],
-            description=control["description"],
-            category_id=category.id,
-            status=CONTROL_STATUS_MISSING
-        )
+        control_fields = {
+            "control_id": control["control_id"],
+            "title": control["name"],
+            "description": control["description"],
+            "category_id": category.id,
+            "status": CONTROL_STATUS_MISSING
+        }
+
+        # Optional, source-provided metadata (e.g. ASVS's official
+        # Level column, NIST's official Implementation Examples).
+        # Only set when the source JSON actually provides them, so
+        # frameworks that don't (e.g. the still-placeholder CIS/ISO
+        # data) keep relying on the model's own defaults rather than
+        # having them overridden with an explicit None.
+        if "priority" in control:
+            control_fields["priority"] = control["priority"]
+
+        if "implementation_guidance" in control:
+            control_fields["implementation_guidance"] = (
+                control["implementation_guidance"]
+            )
+
+        new_control = Control(**control_fields)
 
         db.add(
             new_control

@@ -153,14 +153,15 @@ def test_find_candidate_matches_orders_by_confidence():
 def test_load_rules_merges_frameworks_and_skips_empty():
     """
     load_rules() must merge every framework's mapping_rules.json
-    (nist-csf and owasp-top10 have real content; cis/iso27001/
-    owasp-asvs are still empty placeholders) without raising, and
-    without ever referencing a framework by name.
+    (nist-csf, owasp-top10, and owasp-asvs have real control data;
+    cis/iso27001 still reference only their 2-item placeholder
+    controls, blocked on licensing - see ROADMAP.md) without raising,
+    and without ever referencing a framework by name.
     """
 
     rules = load_rules()
 
-    assert "ID.RA-1" in rules["cve"]["cve-2021-44228"]
+    assert "ID.RA-01" in rules["cve"]["cve-2021-44228"]
     assert "A03" in rules["cwe"]["cwe-79"]
 
 
