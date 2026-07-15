@@ -11,3 +11,4 @@ from app.models.mapping_history import MappingHistory
 from app.models.plugin_enrichment_cache import PluginEnrichmentCache
 from app.models.audit_log import AuditLog
 from app.models.evidence_attachment import EvidenceAttachment
+from app.models.nvd_enrichment_cache import NvdEnrichmentCache

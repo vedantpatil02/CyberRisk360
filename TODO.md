@@ -137,6 +137,16 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       table with upload/list/download/delete endpoints reusing the
       `UPLOAD_DIR` convention. Migration `87367710486c`, verified to
       round-trip cleanly. See `ROADMAP.md` Phase 5. 156 → 178 tests
+- [x] Phase 5 (partial) - CVE enrichment via NVD. Real
+      `cve_enrichment.py` (was a 3-line no-op, never called) with its
+      own persistent cache/retry/backoff mirroring
+      `plugin_enrichment.py`, wired into the import pipeline as a
+      second pass keyed off each finding's first CVE ID (deduped
+      across the batch, bounded call volume), optional `NVD_API_KEY`
+      for a higher rate limit, and a standalone `POST
+      /vulnerabilities/{id}/enrich-cve` to backfill vulnerabilities
+      imported before this existed. Migration `7269075996ec`, verified
+      to round-trip cleanly. See `ROADMAP.md` Phase 5. 178 → 196 tests
 
 ## Next up
 
@@ -163,7 +173,6 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
 
 ## Deferred (explicitly out of scope per Phase 1 Stabilization)
 
-- [ ] `services/enrichment/cve_enrichment.py` (currently a no-op)
 - [ ] Additional frameworks: PCI DSS, SOC 2, HIPAA, NIST SP 800-53
 - [ ] Kubernetes deployment (Docker/Compose done - see Done section)
 - [ ] React frontend

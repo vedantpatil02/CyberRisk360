@@ -5,15 +5,16 @@ Purpose:
 Tests for the Nessus PDF report upload/import pipeline.
 
 Mocks app.services.vulnerabilities.vulnerability_importer's imported
-name for get_plugin_enrichment (not the original module - that's
-where unittest.mock.patch must target for the patch to take effect)
-to avoid any real network calls, while still exercising the real PDF
-text extraction and finding-regex parsing against a real sample
-report (app/tests/fixtures/sample_nessus_report.pdf).
+names for get_plugin_enrichment and enrich_cve (not the original
+modules - that's where unittest.mock.patch must target for the patch
+to take effect) to avoid any real network calls, while still
+exercising the real PDF text extraction and finding-regex parsing
+against a real sample report
+(app/tests/fixtures/sample_nessus_report.pdf).
 """
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from app.tests.test_mapping_engine import _import_nist_csf
 
@@ -32,6 +33,26 @@ FAKE_ENRICHMENT = {
 # created vulnerability, so cache_written is always False (cache-hit
 # shape, no commit-granularity behavior under test here).
 FAKE_ENRICHMENT_RESULT = (FAKE_ENRICHMENT, False)
+
+# enrich_cve returns (result_dict, cache_written). FAKE_ENRICHMENT's
+# cve_ids is truthy, so every import below also reaches the NVD
+# enrichment pass - mocked here the same way, to prove the existing
+# import flows still work unchanged with NVD enrichment mocked out.
+FAKE_NVD_RESULT = (
+    {
+        "cvss_score": None, "cvss_vector": None, "cvss_version": None,
+        "cwe_id": None, "description": "", "published_at": None,
+    },
+    False
+)
+
+
+def _patch_enrichment():
+    return patch.multiple(
+        "app.services.vulnerabilities.vulnerability_importer",
+        get_plugin_enrichment=Mock(return_value=FAKE_ENRICHMENT_RESULT),
+        enrich_cve=Mock(return_value=FAKE_NVD_RESULT),
+    )
 
 
 def _upload(client):
@@ -53,10 +74,7 @@ def _upload_file(client, path, filename, content_type):
 def test_upload_extracts_and_imports_findings(client, db_session):
     _import_nist_csf(db_session)
 
-    with patch(
-        "app.services.vulnerabilities.vulnerability_importer.get_plugin_enrichment",
-        return_value=FAKE_ENRICHMENT_RESULT
-    ):
+    with _patch_enrichment():
         response = _upload(client)
 
     assert response.status_code == 200
@@ -76,10 +94,7 @@ def test_upload_extracts_and_imports_findings(client, db_session):
 def test_reupload_same_file_is_idempotent(client, db_session):
     _import_nist_csf(db_session)
 
-    with patch(
-        "app.services.vulnerabilities.vulnerability_importer.get_plugin_enrichment",
-        return_value=FAKE_ENRICHMENT_RESULT
-    ):
+    with _patch_enrichment():
         first = _upload(client)
         second = _upload(client)
 
@@ -95,10 +110,7 @@ def test_reupload_same_file_is_idempotent(client, db_session):
 def test_upload_creates_pending_mappings(client, db_session):
     _import_nist_csf(db_session)
 
-    with patch(
-        "app.services.vulnerabilities.vulnerability_importer.get_plugin_enrichment",
-        return_value=FAKE_ENRICHMENT_RESULT
-    ):
+    with _patch_enrichment():
         _upload(client)
 
     pending = client.get("/mappings/pending").json()
@@ -111,10 +123,7 @@ def test_upload_creates_pending_mappings(client, db_session):
 def test_csv_upload_extracts_and_imports_findings(client, db_session):
     _import_nist_csf(db_session)
 
-    with patch(
-        "app.services.vulnerabilities.vulnerability_importer.get_plugin_enrichment",
-        return_value=FAKE_ENRICHMENT_RESULT
-    ):
+    with _patch_enrichment():
         response = _upload_file(
             client, FIXTURE_CSV, "sample_report.csv", "text/csv"
         )
@@ -137,10 +146,7 @@ def test_csv_upload_extracts_and_imports_findings(client, db_session):
 def test_nessus_xml_upload_extracts_and_imports_findings(client, db_session):
     _import_nist_csf(db_session)
 
-    with patch(
-        "app.services.vulnerabilities.vulnerability_importer.get_plugin_enrichment",
-        return_value=FAKE_ENRICHMENT_RESULT
-    ):
+    with _patch_enrichment():
         response = _upload_file(
             client, FIXTURE_NESSUS, "sample_report.nessus", "application/xml"
         )

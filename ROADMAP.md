@@ -90,7 +90,14 @@ sequenced after the foundations are stable.
   alongside `assignee_id`, not replaced — it holds non-user values
   (`"Imported"`, an asset's owner label) that don't map to a real
   account. 178 tests (was 156)
-- ⬜ CVE enrichment (`cve_enrichment.py` is a no-op today) via NVD lookup
+- ✅ CVE enrichment (`cve_enrichment.py` was a no-op) via a real NVD
+  lookup: new `nvd_enrichment_cache` table mirroring
+  `plugin_enrichment_cache`'s cache/retry/backoff shape, a second
+  enrichment pass in the import pipeline keyed off the first CVE ID
+  per finding (bounded NVD call volume), optional `NVD_API_KEY` for a
+  higher rate limit, and a standalone `POST
+  /vulnerabilities/{id}/enrich-cve` to backfill vulnerabilities
+  imported before this existed. 196 tests (was 178)
 - ⬜ Notifications (email/webhook): new criticals, SLA breach, import
   done — needs a background-job mechanism (no Celery/APScheduler in
   this codebase yet) and a notification target (SMTP/webhook)
@@ -110,6 +117,7 @@ sequenced after the foundations are stable.
 
 **Current focus:** Phases 1, 2 & 4 complete; Phase 3 largely done
 (remaining: object storage + Redis, both blocked on external infra).
-Phase 5: remediation workflow done; CVE enrichment, notifications,
-scheduled imports, additional frameworks, and SSO remain. Next: the
-rest of Phase 5, or Phase 6 (frontend).
+Phase 5: remediation workflow + CVE enrichment done; notifications,
+scheduled imports, additional frameworks, and SSO remain (each needs
+infra/credentials/source data beyond this codebase). Next: the rest of
+Phase 5, or Phase 6 (frontend).

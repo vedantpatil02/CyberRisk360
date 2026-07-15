@@ -68,6 +68,7 @@ from app.services.vulnerabilities.vulnerability_summary import (
 
 from app.services.remediation.sla import compute_due_date
 from app.services.remediation.evidence import save_evidence, serialize_evidence
+from app.services.enrichment.cve_enrichment import enrich_cve
 
 from app.repositories.vulnerabilities.vulnerability_repository import (
     get_all_vulnerabilities,
@@ -627,3 +628,48 @@ def get_vulnerability_evidence(
         serialize_evidence(a)
         for a in list_by_vulnerability(db, vulnerability_id, org_id=scope)
     ]
+
+
+@router.post(
+    "/vulnerabilities/{vulnerability_id}/enrich-cve"
+)
+def enrich_vulnerability_cve(
+    vulnerability_id: int,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(require_role(*WRITE_ROLES))
+):
+    """
+    On-demand NVD CVE enrichment for a vulnerability that already has
+    a cve_id - covers vulnerabilities imported before this feature
+    existed. Cache-first (see enrich_cve), so repeat calls are cheap.
+    """
+
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
+
+    if not vulnerability:
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
+
+    if not vulnerability.cve_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Vulnerability has no cve_id"
+        )
+
+    cve_id = vulnerability.cve_id.split(",")[0]
+
+    result, cache_written = enrich_cve(db, cve_id)
+
+    needs_commit = cache_written
+
+    if not vulnerability.description and result["description"]:
+        vulnerability.description = result["description"]
+        needs_commit = True
+
+    if needs_commit:
+        db.commit()
+
+    return {"cve_id": cve_id, **result}

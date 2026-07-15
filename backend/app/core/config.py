@@ -65,3 +65,9 @@ TRUST_PROXY_HEADERS = (
 # console format.
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 LOG_FORMAT = os.environ.get("LOG_FORMAT", "console").lower()
+
+# Optional NVD API key (https://nvd.nist.gov/developers/request-an-api-key).
+# Raises the CVE-lookup rate limit from 5 to 50 requests/30s. Absent by
+# default - cve_enrichment.py falls back to the stricter unauthenticated
+# limit when this is None.
+NVD_API_KEY = os.environ.get("NVD_API_KEY")
