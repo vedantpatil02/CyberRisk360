@@ -1,8 +1,11 @@
 import { Chip } from '@mui/material';
 import { statusColors } from '../theme';
-import type { VulnerabilityStatus } from '../api/types/vulnerability';
 
-export function StatusChip({ status }: { status: VulnerabilityStatus }) {
+// Shared by Vulnerabilities (Open/Closed) and Risks (which add Under
+// Review/Mitigated/Accepted) - both are real, typed string unions at
+// their call sites, so a plain `string` prop here doesn't lose any
+// safety, just lets one component serve both domains.
+export function StatusChip({ status }: { status: string }) {
   return (
     <Chip
       label={status}

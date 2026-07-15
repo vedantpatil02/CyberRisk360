@@ -8,8 +8,11 @@ import { VulnerabilitiesListPage } from './pages/vulnerabilities/Vulnerabilities
 import { VulnerabilityDetailPage } from './pages/vulnerabilities/VulnerabilityDetailPage';
 import { AssetsListPage } from './pages/assets/AssetsListPage';
 import { AssetDetailPage } from './pages/assets/AssetDetailPage';
+import { RisksListPage } from './pages/risks/RisksListPage';
+import { RiskDetailPage } from './pages/risks/RiskDetailPage';
 import { VULNERABILITY_READ_ROLES } from './api/endpoints/vulnerabilities';
 import { ASSET_DETAIL_READ_ROLES } from './api/endpoints/assets';
+import { RISK_READ_ROLES } from './api/endpoints/risks';
 
 export function App() {
   return (
@@ -53,6 +56,23 @@ export function App() {
           element={
             <ProtectedRoute roles={ASSET_DETAIL_READ_ROLES}>
               <AssetDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/risks"
+          element={
+            <ProtectedRoute roles={RISK_READ_ROLES}>
+              <RisksListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/risks/:id"
+          element={
+            <ProtectedRoute roles={RISK_READ_ROLES}>
+              <RiskDetailPage />
             </ProtectedRoute>
           }
         />

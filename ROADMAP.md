@@ -154,7 +154,17 @@ sequenced after the foundations are stable.
   summary/vulnerabilities endpoints, not the asset's own fields
   (owner/criticality/IP/environment — visible only from the list).
   Verified end-to-end incl. the 404 state for a nonexistent asset
-- ⬜ Remaining resources: Risks, Controls/Frameworks, Reports, Imports,
+- ✅ Risks list + detail, reusing the `DataTable`/hook/page pattern
+  unchanged — simpler than Assets since `GET /risks` and
+  `GET /risks/{id}` share one RBAC tier (`admin`/`analyst`/`auditor`)
+  rather than splitting across endpoints. `SeverityChip`/`StatusChip`
+  generalized (loosened from vulnerability-only prop types to plain
+  `string`) to cover `risk_level`/the 3 additional risk statuses
+  (`Under Review`/`Mitigated`/`Accepted`) instead of duplicating chip
+  markup. No "mapped controls" equivalent — risks don't map to
+  compliance controls in this schema, so that section is simply
+  absent rather than stubbed. Verified end-to-end incl. the 404 state
+- ⬜ Remaining resources: Controls/Frameworks, Reports, Imports,
   Evidence, Admin/Org management — each follows the same pattern
 
 ---

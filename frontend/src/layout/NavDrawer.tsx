@@ -2,10 +2,12 @@ import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar } fro
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import StorageIcon from '@mui/icons-material/Storage';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { hasRole } from '../api/types/auth';
 import { VULNERABILITY_READ_ROLES } from '../api/endpoints/vulnerabilities';
+import { RISK_READ_ROLES } from '../api/endpoints/risks';
 
 const DRAWER_WIDTH = 240;
 
@@ -45,6 +47,12 @@ export function NavDrawer() {
       // authenticated user (its detail view is separately role-gated
       // in App.tsx via ASSET_DETAIL_READ_ROLES).
       visible: true,
+    },
+    {
+      label: 'Risks',
+      path: '/risks',
+      icon: <WarningAmberIcon />,
+      visible: user !== null && hasRole(user.role, RISK_READ_ROLES),
     },
   ];
 

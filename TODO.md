@@ -190,6 +190,13 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       blocker per framework (CIS: CC BY-NC-ND's No-Derivatives clause;
       ISO: full copyright, no redistribution rights found). 197 → 198
       tests.
+- [x] Phase 6 (partial) - Risks list + detail, reusing the
+      `DataTable`/hook/page pattern unchanged - simpler than Assets
+      since `GET /risks` and `GET /risks/{id}` share one RBAC tier.
+      `SeverityChip`/`StatusChip` generalized to plain `string` props
+      so both Vulnerabilities and Risks share them instead of
+      duplicating chip markup. Verified end-to-end incl. the 404
+      state. See `ROADMAP.md` Phase 6
 
 ## Next up
 

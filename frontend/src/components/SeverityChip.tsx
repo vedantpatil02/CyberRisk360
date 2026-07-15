@@ -1,8 +1,10 @@
 import { Chip } from '@mui/material';
 import { severityColors } from '../theme';
-import type { Severity } from '../api/types/vulnerability';
 
-export function SeverityChip({ severity }: { severity: Severity }) {
+// Shared by Vulnerabilities (severity) and Risks (risk_level) - both
+// use the identical Critical/High/Medium/Low strings, so one
+// component covers both rather than duplicating chip markup.
+export function SeverityChip({ severity }: { severity: string }) {
   return (
     <Chip
       label={severity}
