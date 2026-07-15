@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { AccessDenied } from './AccessDenied';
-import type { Role } from '../api/types/auth';
+import { hasRole, type Role } from '../api/types/auth';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -22,8 +22,8 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (roles && !roles.includes(user.role)) {
-    return <AccessDenied currentRole={user.role} requiredRoles={roles} />;
+  if (!hasRole(user.role, roles)) {
+    return <AccessDenied currentRole={user.role} requiredRoles={roles ?? []} />;
   }
 
   return <>{children}</>;

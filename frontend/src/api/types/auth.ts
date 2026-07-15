@@ -23,3 +23,15 @@ export interface LoginResponse {
   access_token: string;
   token_type: string;
 }
+
+// Mirrors backend/app/dependencies/rbac.py::require_role, which
+// special-cases super_admin to bypass every role check regardless of
+// the endpoint's allowed-roles tuple - a platform super-admin spans
+// every capability, not just organization management. Every
+// role-gated check on the frontend (ProtectedRoute, nav visibility)
+// should go through this instead of a raw `roles.includes(...)`.
+export function hasRole(role: Role, allowedRoles?: readonly Role[]): boolean {
+  if (role === 'super_admin') return true;
+  if (!allowedRoles) return true; // no restriction = any authenticated role
+  return allowedRoles.includes(role);
+}

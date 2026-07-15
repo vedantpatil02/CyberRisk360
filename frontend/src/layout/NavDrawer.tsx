@@ -3,6 +3,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { hasRole } from '../api/types/auth';
 import { VULNERABILITY_READ_ROLES } from '../api/endpoints/vulnerabilities';
 
 const DRAWER_WIDTH = 240;
@@ -26,15 +27,14 @@ export function NavDrawer() {
       path: '/dashboard',
       icon: <DashboardIcon />,
       // GET /dashboard/overview has no role check at all - visible to
-      // any authenticated user, including a rendered-but-otherwise-
-      // locked-out super_admin.
+      // any authenticated user.
       visible: true,
     },
     {
       label: 'Vulnerabilities',
       path: '/vulnerabilities',
       icon: <BugReportIcon />,
-      visible: user !== null && VULNERABILITY_READ_ROLES.includes(user.role),
+      visible: user !== null && hasRole(user.role, VULNERABILITY_READ_ROLES),
     },
   ];
 

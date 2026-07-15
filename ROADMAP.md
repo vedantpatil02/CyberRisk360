@@ -83,6 +83,16 @@ sequenced after the foundations are stable.
   `docker-entrypoint.sh` — provisioning a privileged account is a
   manual operator action, not something to run silently on every
   container start
+- ✅ `super_admin` now bypasses every `require_role(...)` check
+  (`app/dependencies/rbac.py`), not just `/organizations` — previously
+  it could only manage orgs and hit the role-check-free
+  `/dashboard/overview`, 403ing on every other endpoint since it's
+  deliberately excluded from `ALL_ROLES`. Mirrors how
+  `tenancy.py`'s `org_scope`/`org_home` and `users.py`'s
+  `_get_managed_user` already special-case it (a platform super-admin
+  is meant to span every capability, not just tenant management).
+  Frontend's `ProtectedRoute`/nav-gating updated to match via a
+  `hasRole()` helper
 - ⬜ Follow-up: per-org control implementation status (join table)
 
 ## Phase 5 — Workflow, integrations, enrichment 🚧

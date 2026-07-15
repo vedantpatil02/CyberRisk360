@@ -112,6 +112,38 @@ def test_super_admin_sees_all_orgs(client, db_session, as_user):
     assert {a["org_id"] for a in assets} == {ORG1, ORG2}
 
 
+def test_super_admin_bypasses_require_role_on_reads(client, db_session, as_user):
+    """
+    super_admin is deliberately excluded from ALL_ROLES (see
+    constants.py), so it's never a member of any require_role(...)
+    tuple - but a platform super-admin is meant to span every
+    capability, not just organization management. require_role()
+    special-cases it the same way tenancy.py's org_scope/org_home
+    already do for reads/writes.
+    """
+    _seed_two_orgs(db_session)
+
+    as_user(role=ROLE_SUPER_ADMIN, org_id=ORG1)
+    # GET /vulnerabilities requires (admin, analyst, auditor) - none
+    # of which super_admin is.
+    response = client.get("/vulnerabilities")
+    assert response.status_code == 200
+
+
+def test_super_admin_bypasses_require_role_on_writes(client, db_session, as_user):
+    _make_org2(db_session)
+    a1 = _asset(db_session, ORG1, "10.0.0.50")
+    db_session.commit()
+
+    as_user(role=ROLE_SUPER_ADMIN, org_id=ORG1)
+    # POST /risks requires (admin, analyst) - super_admin is neither.
+    response = client.post("/risks", json={
+        "title": "t", "description": "d", "asset_id": a1.id,
+        "impact": 3, "likelihood": 3, "owner": "IT",
+    })
+    assert response.status_code == 200
+
+
 # --- write scoping -----------------------------------------------------
 
 def test_created_asset_lands_in_callers_org(client, db_session, as_user):
