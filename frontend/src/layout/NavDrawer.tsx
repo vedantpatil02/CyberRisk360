@@ -3,11 +3,13 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import StorageIcon from '@mui/icons-material/Storage';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import RuleIcon from '@mui/icons-material/Rule';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { hasRole } from '../api/types/auth';
 import { VULNERABILITY_READ_ROLES } from '../api/endpoints/vulnerabilities';
 import { RISK_READ_ROLES } from '../api/endpoints/risks';
+import { FRAMEWORK_READ_ROLES } from '../api/endpoints/frameworks';
 
 const DRAWER_WIDTH = 240;
 
@@ -53,6 +55,12 @@ export function NavDrawer() {
       path: '/risks',
       icon: <WarningAmberIcon />,
       visible: user !== null && hasRole(user.role, RISK_READ_ROLES),
+    },
+    {
+      label: 'Frameworks',
+      path: '/frameworks',
+      icon: <RuleIcon />,
+      visible: user !== null && hasRole(user.role, FRAMEWORK_READ_ROLES),
     },
   ];
 

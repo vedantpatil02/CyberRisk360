@@ -10,9 +10,12 @@ import { AssetsListPage } from './pages/assets/AssetsListPage';
 import { AssetDetailPage } from './pages/assets/AssetDetailPage';
 import { RisksListPage } from './pages/risks/RisksListPage';
 import { RiskDetailPage } from './pages/risks/RiskDetailPage';
+import { FrameworksListPage } from './pages/frameworks/FrameworksListPage';
+import { FrameworkDetailPage } from './pages/frameworks/FrameworkDetailPage';
 import { VULNERABILITY_READ_ROLES } from './api/endpoints/vulnerabilities';
 import { ASSET_DETAIL_READ_ROLES } from './api/endpoints/assets';
 import { RISK_READ_ROLES } from './api/endpoints/risks';
+import { FRAMEWORK_READ_ROLES } from './api/endpoints/frameworks';
 
 export function App() {
   return (
@@ -73,6 +76,23 @@ export function App() {
           element={
             <ProtectedRoute roles={RISK_READ_ROLES}>
               <RiskDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/frameworks"
+          element={
+            <ProtectedRoute roles={FRAMEWORK_READ_ROLES}>
+              <FrameworksListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/frameworks/:shortName"
+          element={
+            <ProtectedRoute roles={FRAMEWORK_READ_ROLES}>
+              <FrameworkDetailPage />
             </ProtectedRoute>
           }
         />

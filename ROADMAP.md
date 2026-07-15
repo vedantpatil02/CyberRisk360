@@ -164,8 +164,22 @@ sequenced after the foundations are stable.
   markup. No "mapped controls" equivalent — risks don't map to
   compliance controls in this schema, so that section is simply
   absent rather than stubbed. Verified end-to-end incl. the 404 state
-- ⬜ Remaining resources: Controls/Frameworks, Reports, Imports,
-  Evidence, Admin/Org management — each follows the same pattern
+- ✅ Frameworks list + detail — the first resource that genuinely
+  doesn't fit the `DataTable` pattern: none of `GET /frameworks`,
+  `.../summary`, `.../gaps` support server-side pagination/sort/
+  filter, so this uses plain MUI tables instead (matching
+  `DashboardPage`'s precedent) rather than faking a contract the
+  backend doesn't offer. Detail page shows the framework's real
+  compliance posture (`vulnerability_coverage_score` + controls
+  split into with/without-coverage) via `.../gaps` — deliberately no
+  per-control drill-down page, since no endpoint exposes one
+  framework's controls with full description/priority/guidance (`GET
+  /controls` is all 465 controls, unfiltered and unpaginated, with no
+  way to resolve a control back to its framework). "Not found" is
+  inferred from `total_controls === 0` since neither endpoint 404s
+  for an unknown short_name. Verified end-to-end incl. that state
+- ⬜ Remaining resources: Reports, Imports, Evidence, Admin/Org
+  management — each follows the same pattern
 
 ---
 

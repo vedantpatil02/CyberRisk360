@@ -197,6 +197,16 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       so both Vulnerabilities and Risks share them instead of
       duplicating chip markup. Verified end-to-end incl. the 404
       state. See `ROADMAP.md` Phase 6
+- [x] Phase 6 (partial) - Frameworks list + detail. First resource
+      that doesn't fit `DataTable` - none of its endpoints support
+      server-side pagination/sort/filter, so plain MUI tables are used
+      instead of forcing the generic component onto a contract the
+      backend doesn't offer. Detail page surfaces real compliance gap
+      analysis (controls with/without approved-mapping coverage) via
+      `GET /frameworks/{name}/gaps`; per-control drill-down is out of
+      scope since no endpoint exposes one framework's controls with
+      full detail (documented gap, not papered over). Verified
+      end-to-end incl. the not-found state. See `ROADMAP.md` Phase 6
 
 ## Next up
 
