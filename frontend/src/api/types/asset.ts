@@ -41,3 +41,23 @@ export interface AssetListParams {
   environment?: string;
   asset_type?: string;
 }
+
+// POST /assets body (backend/app/schemas/asset.py - AssetCreate).
+export interface AssetCreateInput {
+  name: string;
+  asset_type: string;
+  owner: string;
+  criticality: string;
+  ip_address?: string | null;
+  environment: string;
+}
+
+// PUT /assets/{id} body (AssetUpdate) - all optional.
+export interface AssetUpdateInput {
+  name?: string;
+  asset_type?: string;
+  owner?: string;
+  criticality?: string;
+  ip_address?: string | null;
+  environment?: string;
+}

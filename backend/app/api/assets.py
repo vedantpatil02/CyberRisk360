@@ -7,6 +7,7 @@ from fastapi import Query
 from sqlalchemy.orm import Session
 
 from app.schemas.asset import AssetCreate
+from app.schemas.asset_update import AssetUpdate
 from app.dependencies.database import get_db
 from app.dependencies.security import (
     get_current_user
@@ -25,7 +26,8 @@ from app.repositories.assets.asset_repository import (
     get_all_assets,
     query_assets,
     get_asset,
-    create_asset as db_create_asset
+    create_asset as db_create_asset,
+    update_asset as db_update_asset
 )
 from app.repositories.vulnerabilities.vulnerability_repository import (
     get_by_asset
@@ -221,3 +223,80 @@ def asset_risk_summary(
         db,
         org_id=org_id
     )
+
+
+# Registered after every fixed /assets/... path above (e.g.
+# risk-summary) - Starlette matches routes in registration order and
+# this router doesn't use an explicit `{asset_id:int}` path converter,
+# so a generic /assets/{asset_id} declared earlier would swallow those
+# fixed routes instead of falling through (same reasoning already
+# applied to /vulnerabilities/top-critical vs
+# /vulnerabilities/{vulnerability_id}).
+@router.get(
+    "/assets/{asset_id}"
+)
+def get_asset_by_id(
+    asset_id: int,
+    db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Retrieve a single asset's own fields (name, type, owner,
+    criticality, ip_address, environment).
+    """
+
+    asset = get_asset(db, asset_id, org_id=org_id)
+
+    if not asset:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
+
+    return asset
+
+
+@router.put(
+    "/assets/{asset_id}"
+)
+def update_asset_by_id(
+    asset_id: int,
+    asset_update: AssetUpdate,
+    db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST
+        )
+    )
+):
+    """
+    Update an existing asset.
+    """
+
+    asset = get_asset(db, asset_id, org_id=org_id)
+
+    if not asset:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
+
+    update_data = asset_update.model_dump(exclude_unset=True)
+
+    db_update_asset(db, asset, update_data)
+
+    # update_asset() commits, which expires `asset`'s loaded attributes -
+    # refresh before returning it directly, same fix already applied to
+    # update_framework()/mapping approve for the identical bug.
+    db.refresh(asset)
+
+    return asset

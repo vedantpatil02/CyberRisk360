@@ -44,6 +44,49 @@ def test_list_assets(client, seed_asset):
     assert assets[0]["id"] == seed_asset
 
 
+def test_get_asset_by_id(client, seed_asset):
+    response = client.get(f"/assets/{seed_asset}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == seed_asset
+    assert body["name"] == "web-01"
+    assert body["criticality"] == "High"
+
+
+def test_get_asset_by_id_not_found(client):
+    response = client.get("/assets/999999")
+
+    assert response.status_code == 404
+
+
+def test_update_asset(client, seed_asset):
+    response = client.put(f"/assets/{seed_asset}", json={
+        "criticality": "Critical", "owner": "Security Team"
+    })
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["criticality"] == "Critical"
+    assert body["owner"] == "Security Team"
+    # Untouched fields survive the partial update.
+    assert body["name"] == "web-01"
+
+
+def test_update_asset_not_found(client):
+    response = client.put("/assets/999999", json={"criticality": "Low"})
+
+    assert response.status_code == 404
+
+
+def test_update_asset_requires_admin_or_analyst(client, seed_asset, as_role):
+    as_role("auditor")
+
+    response = client.put(f"/assets/{seed_asset}", json={"criticality": "Low"})
+
+    assert response.status_code == 403
+
+
 def test_asset_summary_not_found(client):
     response = client.get("/assets/999999/summary")
 

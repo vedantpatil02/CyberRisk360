@@ -180,3 +180,16 @@ def create_asset(
     db.refresh(asset)
 
     return asset
+
+
+def update_asset(
+    db: Session,
+    asset: Asset,
+    updates: dict
+):
+    for field, value in updates.items():
+        setattr(asset, field, value)
+
+    db.commit()
+
+    return asset
