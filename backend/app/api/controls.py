@@ -16,13 +16,22 @@ from app.schemas.control import ControlCreate
 from app.dependencies.database import get_db
 
 from app.dependencies.rbac import require_role
-from app.dependencies.tenancy import org_scope
+from app.dependencies.tenancy import org_scope, org_home
 
-from app.core.constants import ROLE_ADMIN, ROLE_ANALYST, ROLE_AUDITOR, CONTROL_STATUS_MISSING, MAPPING_STATUS_APPROVED
+from app.core.constants import (
+    ROLE_ADMIN,
+    ROLE_ANALYST,
+    ROLE_AUDITOR,
+    CONTROL_STATUS_MISSING,
+    MAPPING_STATUS_APPROVED,
+    COMPLIANCE_ROLES,
+    READ_ROLES,
+)
 
 from app.analytics.compliance import calculate_compliance_summary
 
 from app.schemas.control_update import ControlUpdate
+from app.schemas.control_review import ControlReviewCreate
 
 from app.repositories.controls.control_repository import (
     get_all_controls,
@@ -31,6 +40,10 @@ from app.repositories.controls.control_repository import (
     update_control_status as db_update_control_status,
     get_controls_by_framework
 )
+from app.repositories.controls.control_review_repository import (
+    list_reviews_for_control
+)
+from app.services.controls.control_review import submit_review
 from app.repositories.vulnerabilities.vulnerability_repository import (
     get_by_control
 )
@@ -188,6 +201,56 @@ def update_control_status(
         "message":
         "Control updated"
     }
+
+@router.post(
+    "/controls/{control_id}/review"
+)
+def review_control(
+    control_id: int,
+    review: ControlReviewCreate,
+    db: Session = Depends(get_db),
+    org_id=Depends(org_home),
+    current_user=Depends(require_role(*COMPLIANCE_ROLES))
+):
+    """
+    Submit a review of a control's implementation status, recording
+    who reviewed it, what changed, and why - unlike
+    PATCH /controls/{control_id}/status, which changes the status with
+    no trail at all.
+    """
+
+    created = submit_review(
+        db,
+        control_id,
+        new_status=review.new_status,
+        notes=review.notes,
+        reviewer=current_user.get("sub"),
+        org_id=org_id,
+    )
+
+    if not created:
+        raise HTTPException(status_code=404, detail="Control not found")
+
+    return created
+
+
+@router.get(
+    "/controls/{control_id}/reviews"
+)
+def get_control_reviews(
+    control_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(*READ_ROLES))
+):
+    """
+    Return the review history for a control.
+    """
+
+    if not db_get_control(db, control_id):
+        raise HTTPException(status_code=404, detail="Control not found")
+
+    return list_reviews_for_control(db, control_id)
+
 
 @router.get(
     "/controls/{control_id}/vulnerabilities"

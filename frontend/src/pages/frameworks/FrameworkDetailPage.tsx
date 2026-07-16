@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Alert,
   Box,
+  Button,
   Grid2 as Grid,
+  MenuItem,
   Paper,
   Table,
   TableBody,
@@ -10,13 +13,31 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material';
+import axios from 'axios';
 import { useFrameworkSummary } from '../../hooks/useFrameworkSummary';
 import { useFrameworkGaps } from '../../hooks/useFrameworkGaps';
+import { useSubmitControlReview } from '../../hooks/useSubmitControlReview';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
+import { StatusChip } from '../../components/StatusChip';
+import { useAuth } from '../../auth/AuthContext';
+import { hasRole } from '../../api/types/auth';
+import { CONTROL_REVIEW_ROLES } from '../../api/endpoints/controls';
 import type { FrameworkGapControl } from '../../api/types/framework';
+
+const STATUS_OPTIONS = ['Missing', 'Partially Implemented', 'Implemented'];
+
+function mutationErrorMessage(error: unknown): string | null {
+  if (!error) return null;
+  if (axios.isAxiosError(error)) {
+    const detail = (error.response?.data as { detail?: unknown } | undefined)?.detail;
+    if (typeof detail === 'string') return detail;
+  }
+  return 'Something went wrong.';
+}
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
@@ -29,7 +50,65 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function ReviewControlForm({ controlId, onDone }: { controlId: number; onDone: () => void }) {
+  const [newStatus, setNewStatus] = useState('Implemented');
+  const [notes, setNotes] = useState('');
+  const mutation = useSubmitControlReview(controlId);
+
+  return (
+    <TableRow>
+      <TableCell colSpan={4}>
+        <Box
+          component="form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate({ new_status: newStatus, notes: notes || undefined }, { onSuccess: onDone });
+          }}
+          sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap', py: 1 }}
+        >
+          <TextField
+            select
+            label="New Status"
+            size="small"
+            value={newStatus}
+            onChange={(e) => setNewStatus(e.target.value)}
+            sx={{ minWidth: 180 }}
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Notes"
+            size="small"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            sx={{ flex: 1, minWidth: 240 }}
+          />
+          <Button type="submit" variant="contained" size="small" disabled={mutation.isPending}>
+            Submit Review
+          </Button>
+          <Button size="small" onClick={onDone}>
+            Cancel
+          </Button>
+          {mutation.isError && (
+            <Alert severity="error" sx={{ width: '100%' }}>
+              {mutationErrorMessage(mutation.error)}
+            </Alert>
+          )}
+        </Box>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 function ControlsTable({ title, controls }: { title: string; controls: FrameworkGapControl[] }) {
+  const { user } = useAuth();
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const canReview = user !== null && hasRole(user.role, CONTROL_REVIEW_ROLES);
+
   return (
     <Box sx={{ mb: 3 }}>
       <Typography variant="h6" gutterBottom>
@@ -41,22 +120,42 @@ function ControlsTable({ title, controls }: { title: string; controls: Framework
             <TableRow>
               <TableCell>Control ID</TableCell>
               <TableCell>Name</TableCell>
+              <TableCell>Status</TableCell>
               <TableCell align="right">Approved Mappings</TableCell>
+              {canReview && <TableCell align="right">Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {controls.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3}>None.</TableCell>
+                <TableCell colSpan={canReview ? 5 : 4}>None.</TableCell>
               </TableRow>
             )}
-            {controls.map((control) => (
-              <TableRow key={control.control_id}>
-                <TableCell>{control.control_id}</TableCell>
-                <TableCell>{control.name}</TableCell>
-                <TableCell align="right">{control.affected_vulnerabilities}</TableCell>
-              </TableRow>
-            ))}
+            {controls.map((control) =>
+              reviewingId === control.id ? (
+                <ReviewControlForm
+                  key={control.control_id}
+                  controlId={control.id}
+                  onDone={() => setReviewingId(null)}
+                />
+              ) : (
+                <TableRow key={control.control_id}>
+                  <TableCell>{control.control_id}</TableCell>
+                  <TableCell>{control.name}</TableCell>
+                  <TableCell>
+                    <StatusChip status={control.status} />
+                  </TableCell>
+                  <TableCell align="right">{control.affected_vulnerabilities}</TableCell>
+                  {canReview && (
+                    <TableCell align="right">
+                      <Button size="small" onClick={() => setReviewingId(control.id)}>
+                        Review
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ),
+            )}
           </TableBody>
         </Table>
       </TableContainer>

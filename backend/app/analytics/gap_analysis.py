@@ -40,11 +40,17 @@ def get_framework_gaps(
         )
 
         control_data = {
+            "id":
+                control.id,
+
             "control_id":
                 control.control_id,
 
             "name":
                 control.title,
+
+            "status":
+                control.status,
 
             "affected_vulnerabilities":
                 mapping_count

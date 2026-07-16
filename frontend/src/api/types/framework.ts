@@ -31,8 +31,10 @@ export interface FrameworkSummary {
 // framework), so gaps is the practical way to browse one framework's
 // controls, grouped by whether they have vulnerability coverage.
 export interface FrameworkGapControl {
+  id: number; // Control's numeric id - needed for POST /controls/{id}/review
   control_id: string;
   name: string;
+  status: string; // Missing / Partially Implemented / Implemented
   affected_vulnerabilities: number;
 }
 
@@ -41,4 +43,26 @@ export interface FrameworkGaps {
   total_controls: number;
   affected_controls: FrameworkGapControl[];
   unaffected_controls: FrameworkGapControl[];
+}
+
+// POST /frameworks body (backend/app/schemas/framework.py -
+// FrameworkCreate).
+export interface FrameworkCreateInput {
+  name: string;
+  short_name: string;
+  version: string;
+  publisher: string;
+  description?: string | null;
+  release_year?: number | null;
+}
+
+// PATCH /frameworks/{id} body (FrameworkUpdate) - all optional.
+// short_name is deliberately not included - it isn't updatable on the
+// backend once a framework is created.
+export interface FrameworkUpdateInput {
+  name?: string;
+  version?: string;
+  publisher?: string;
+  description?: string | null;
+  release_year?: number | null;
 }
