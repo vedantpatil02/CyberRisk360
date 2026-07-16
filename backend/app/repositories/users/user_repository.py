@@ -48,6 +48,23 @@ def get_by_id_in_org(
     return query.first()
 
 
+def list_users(
+    db: Session,
+    org_id: int = None
+):
+    """
+    List users. `org_id=None` = no restriction (super-admin sees every
+    org), mirroring `get_by_id_in_org`'s convention.
+    """
+
+    query = db.query(User)
+
+    if org_id is not None:
+        query = query.filter(User.org_id == org_id)
+
+    return query.order_by(User.id).all()
+
+
 def create_user(
     db: Session,
     username: str,

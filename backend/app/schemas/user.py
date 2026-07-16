@@ -1,5 +1,7 @@
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import EmailStr
 from pydantic import Field
 
@@ -22,3 +24,20 @@ class PasswordChange(BaseModel):
 
 class PasswordReset(BaseModel):
     new_password: str = Field(min_length=8)
+
+
+class UserRoleUpdate(BaseModel):
+    role: str
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    email: EmailStr
+    role: str
+    org_id: int
+    is_active: bool
+    last_login: Optional[datetime] = None
+    created_at: Optional[datetime] = None

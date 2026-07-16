@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate, Link as RouterLink } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import {
@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Container,
+  Link,
   Paper,
   TextField,
   Typography,
@@ -104,6 +105,12 @@ export function LoginPage() {
             >
               {mutation.isPending ? <CircularProgress size={24} /> : 'Sign in'}
             </Button>
+            <Typography variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+              Don&apos;t have an account?{' '}
+              <Link component={RouterLink} to="/register">
+                Create one
+              </Link>
+            </Typography>
           </Box>
         </Paper>
       </Box>

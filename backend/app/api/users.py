@@ -1,16 +1,24 @@
+from typing import List
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Request
 from sqlalchemy.orm import Session
 
-from app.schemas.user import UserCreate, PasswordChange, PasswordReset
+from app.schemas.user import (
+    UserCreate,
+    PasswordChange,
+    PasswordReset,
+    UserOut,
+    UserRoleUpdate,
+)
 from app.dependencies.database import get_db
 from app.dependencies.rbac import require_role
 from app.dependencies.security import get_current_user
-from app.dependencies.tenancy import is_super_admin
+from app.dependencies.tenancy import is_super_admin, org_scope
 from app.core.constants import ROLE_ADMIN
-from app.repositories.users.user_repository import get_by_email, get_by_id
+from app.repositories.users.user_repository import get_by_email, get_by_id, list_users
 from app.repositories.organizations.organization_repository import (
     get_organization_by_slug
 )
@@ -19,6 +27,7 @@ from app.services.users.user_service import (
     register_user as register_user_account,
     change_password as change_user_password,
     set_active,
+    update_role,
     VALID_ROLES
 )
 
@@ -53,9 +62,25 @@ from app.services.audit.audit import (
     ACTION_USER_PASSWORD_RESET,
     ACTION_USER_ACTIVATE,
     ACTION_USER_DEACTIVATE,
+    ACTION_USER_ROLE_CHANGE,
 )
 
 router = APIRouter()
+
+
+@router.get("/users", response_model=List[UserOut])
+def list_all_users(
+    db: Session = Depends(get_db),
+    org_id=Depends(org_scope),
+    current_user=Depends(require_role(ROLE_ADMIN)),
+):
+    """
+    List users. Org-scoped for an org admin; unrestricted (every org)
+    for a super-admin, same convention as `org_scope` everywhere else.
+    """
+
+    return list_users(db, org_id=org_id)
+
 
 """
 Register a new user account.
@@ -159,7 +184,7 @@ def admin_reset_password(
     """
     Admin-initiated password reset for another account. (Self-service
     token-based reset is deferred until notifications/email exist -
-    see ROADMAP.md Phase 5.)
+    see docs/ROADMAP.md Phase 5.)
     """
 
     user = _get_managed_user(db, user_id, current_user)
@@ -234,3 +259,36 @@ def activate_user(
     )
 
     return {"message": "User activated"}
+
+
+@router.patch("/users/{user_id}/role")
+def change_user_role(
+    user_id: int,
+    payload: UserRoleUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(ROLE_ADMIN))
+):
+    """
+    Change a user's role.
+    """
+
+    if payload.role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+    user = _get_managed_user(db, user_id, current_user)
+
+    update_role(db, user, payload.role)
+
+    record_audit(
+        db,
+        action=ACTION_USER_ROLE_CHANGE,
+        actor=current_user["sub"],
+        entity_type="user",
+        entity_id=user.id,
+        ip_address=client_ip(request),
+        detail=f"role={payload.role}",
+        org_id=user.org_id,
+    )
+
+    return {"message": "Role updated"}

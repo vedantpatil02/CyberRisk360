@@ -192,3 +192,14 @@ def set_active(db, user, is_active: bool):
     db.commit()
 
     return user
+
+
+def update_role(db, user, role: str):
+    """
+    Change a user's role.
+    """
+
+    user.role = role
+    db.commit()
+
+    return user

@@ -21,12 +21,23 @@ ACTION_USER_PASSWORD_CHANGE = "user.password_change"
 ACTION_USER_PASSWORD_RESET = "user.password_reset"
 ACTION_USER_ACTIVATE = "user.activate"
 ACTION_USER_DEACTIVATE = "user.deactivate"
+ACTION_USER_ROLE_CHANGE = "user.role_change"
 ACTION_IMPORT_UPLOAD = "import.upload"
 ACTION_MAPPING_APPROVE = "mapping.approve"
 ACTION_MAPPING_REJECT = "mapping.reject"
 ACTION_RISK_GENERATE = "risk.generate"
 ACTION_VULNERABILITY_ASSIGN = "vulnerability.assign"
 ACTION_RISK_ASSIGN = "risk.assign"
+ACTION_RISK_TREATMENT_PROPOSE = "risk.treatment_propose"
+ACTION_RISK_TREATMENT_APPROVE = "risk.treatment_approve"
+ACTION_RISK_TREATMENT_REJECT = "risk.treatment_reject"
+
+# Audit *engagement* lifecycle events (the Audit/AuditFinding models) -
+# not to be confused with this module's own generic activity trail,
+# which these constants themselves feed into via record_audit().
+ACTION_AUDIT_CREATE = "audit.create"
+ACTION_AUDIT_CLOSE = "audit.close"
+ACTION_AUDIT_FINDING_CREATE = "audit.finding_create"
 
 ANONYMOUS_ACTOR = "anonymous"
 SYSTEM_ACTOR = "system"

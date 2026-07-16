@@ -194,6 +194,51 @@ def test_change_password_enforces_min_length(client):
     assert response.status_code == 422
 
 
+# --- listing / role management -----------------------------------------
+
+def test_admin_lists_users(client, db_session):
+    _register(client, "listed@example.com")
+
+    response = client.get("/users")
+    assert response.status_code == 200
+    emails = [u["email"] for u in response.json()]
+    assert "listed@example.com" in emails
+    # Never exposes the password hash.
+    assert all("password" not in u for u in response.json())
+
+
+def test_list_users_requires_admin(client, as_role):
+    as_role("analyst")
+    assert client.get("/users").status_code == 403
+
+
+def test_admin_changes_user_role(client, db_session):
+    _register(client, "promote@example.com", role="analyst")
+    user = get_by_email(db_session, "promote@example.com")
+
+    response = client.patch(f"/users/{user.id}/role", json={"role": "auditor"})
+    assert response.status_code == 200
+
+    db_session.expire_all()
+    assert get_by_email(db_session, "promote@example.com").role == "auditor"
+
+
+def test_change_role_rejects_invalid_role(client, db_session):
+    _register(client, "badrole@example.com")
+    user = get_by_email(db_session, "badrole@example.com")
+
+    response = client.patch(f"/users/{user.id}/role", json={"role": "not-a-role"})
+    assert response.status_code == 400
+
+
+def test_change_role_requires_admin(client, db_session, as_role):
+    _register(client, "victim2@example.com")
+    user = get_by_email(db_session, "victim2@example.com")
+
+    as_role("analyst")
+    assert client.patch(f"/users/{user.id}/role", json={"role": "auditor"}).status_code == 403
+
+
 def test_admin_reset_password(client, db_session, reset_rate_limiter):
     _register(client, "target@example.com", password="OldPassw0rd!")
     user = get_by_email(db_session, "target@example.com")
