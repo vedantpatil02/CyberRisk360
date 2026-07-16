@@ -6,6 +6,7 @@ Manage vulnerability records and
 associate them with assets and risks.
 """
 
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter
@@ -15,6 +16,7 @@ from fastapi import Query
 from fastapi import Request
 from fastapi import UploadFile
 from fastapi import File
+from fastapi import Form
 
 from sqlalchemy.orm import Session
 
@@ -69,6 +71,15 @@ from app.services.vulnerabilities.vulnerability_summary import (
 from app.services.remediation.sla import compute_due_date
 from app.services.remediation.evidence import save_evidence, serialize_evidence
 from app.services.enrichment.cve_enrichment import enrich_cve
+from app.services.enrichment.cisa_kev import check_kev_status
+from app.services.enrichment.epss_enrichment import get_epss_score
+from app.repositories.enrichment.nvd_cache_repository import (
+    get_cache_entry as get_nvd_cache_entry
+)
+from app.services.mapping.mapping_engine import extract_cwe_ids
+from app.services.enrichment.cwe_catalog import get_cwe_info
+from app.services.enrichment.capec_catalog import get_capec_for_cwe
+from app.services.enrichment.exploitdb import get_exploits_for_cve
 
 from app.repositories.vulnerabilities.vulnerability_repository import (
     get_all_vulnerabilities,
@@ -518,6 +529,175 @@ def get_suggested_controls(
 
 
 @router.get(
+    "/vulnerabilities/{vulnerability_id}/kev-status"
+)
+def get_vulnerability_kev_status(
+    vulnerability_id: int,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Check whether this vulnerability's CVE is in CISA's Known
+    Exploited Vulnerabilities (KEV) catalog.
+    """
+
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
+
+    if not vulnerability:
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
+
+    return check_kev_status(db, vulnerability.cve_id)
+
+
+@router.get(
+    "/vulnerabilities/{vulnerability_id}/epss-score"
+)
+def get_vulnerability_epss_score(
+    vulnerability_id: int,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Look up this vulnerability's CVE's EPSS (Exploit Prediction Scoring
+    System) score and percentile from FIRST.org.
+    """
+
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
+
+    if not vulnerability:
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
+
+    score = get_epss_score(db, vulnerability.cve_id)
+
+    if not score:
+        return {"epss_score": None, "percentile": None, "date": None}
+
+    return score
+
+
+@router.get(
+    "/vulnerabilities/{vulnerability_id}/cwe-info"
+)
+def get_vulnerability_cwe_info(
+    vulnerability_id: int,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    Resolve this vulnerability's CWE (Common Weakness Enumeration) -
+    the authoritative NVD-enriched cwe_id if one's been cached,
+    otherwise falling back to the same title/description extraction
+    the mapping engine itself uses - and look it up against the
+    curated CWE reference catalog.
+    """
+
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
+
+    if not vulnerability:
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
+
+    cwe_id = None
+
+    if vulnerability.cve_id:
+        nvd_entry = get_nvd_cache_entry(db, vulnerability.cve_id)
+
+        if nvd_entry and nvd_entry.status == "ok" and nvd_entry.cwe_id:
+            cwe_id = nvd_entry.cwe_id
+
+    if not cwe_id:
+        extracted = extract_cwe_ids(vulnerability)
+
+        if extracted:
+            cwe_id = extracted[0]
+
+    if not cwe_id:
+        return {
+            "cwe_id": None, "name": None, "description": None, "url": None,
+            "capec": None,
+        }
+
+    url = f"https://cwe.mitre.org/data/definitions/{cwe_id.split('-')[-1]}.html"
+    capec = get_capec_for_cwe(cwe_id)
+
+    info = get_cwe_info(cwe_id)
+
+    if not info:
+        return {
+            "cwe_id": cwe_id, "name": None, "description": None, "url": url,
+            "capec": capec,
+        }
+
+    return {
+        "cwe_id": cwe_id,
+        "name": info["name"],
+        "description": info["description"],
+        "url": url,
+        "capec": capec,
+    }
+
+
+@router.get(
+    "/vulnerabilities/{vulnerability_id}/exploits"
+)
+def get_vulnerability_exploits(
+    vulnerability_id: int,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(
+        require_role(
+            ROLE_ADMIN,
+            ROLE_ANALYST,
+            ROLE_AUDITOR
+        )
+    )
+):
+    """
+    List known public exploits for this vulnerability's CVE, from
+    Exploit-DB.
+    """
+
+    vulnerability = db_get_vulnerability(db, vulnerability_id, org_id=scope)
+
+    if not vulnerability:
+        raise HTTPException(
+            status_code=404,
+            detail="Vulnerability not found"
+        )
+
+    return get_exploits_for_cve(db, vulnerability.cve_id)
+
+
+@router.get(
     "/vulnerabilities/{vulnerability_id}/controls"
 )
 def get_vulnerability_controls(
@@ -572,12 +752,15 @@ def get_vulnerability_controls(
 def upload_vulnerability_evidence(
     vulnerability_id: int,
     file: UploadFile = File(...),
+    expires_at: Optional[datetime] = Form(None),
     db: Session = Depends(get_db),
     scope=Depends(org_scope),
+    org_id=Depends(org_home),
     current_user=Depends(require_role(*WRITE_ROLES))
 ):
     """
-    Upload a remediation-evidence file for a vulnerability.
+    Upload a remediation-evidence file for a vulnerability. Optional
+    `expires_at` drives the in-app notification list.
     """
 
     if not db_get_vulnerability(db, vulnerability_id, org_id=scope):
@@ -592,12 +775,17 @@ def upload_vulnerability_evidence(
         raise HTTPException(status_code=404, detail="User not found")
 
     try:
+        # org_home (not org_scope) - the new row's org_id must be a
+        # concrete org even for a super-admin, whose org_scope is None
+        # (unscoped reads). Same convention every other create
+        # endpoint in this codebase already uses (e.g. POST /risks).
         attachment = save_evidence(
             db,
             file=file,
             uploaded_by_id=uploader.id,
-            org_id=scope,
+            org_id=org_id,
             vulnerability_id=vulnerability_id,
+            expires_at=expires_at,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -12,3 +12,10 @@ from app.models.plugin_enrichment_cache import PluginEnrichmentCache
 from app.models.audit_log import AuditLog
 from app.models.evidence_attachment import EvidenceAttachment
 from app.models.nvd_enrichment_cache import NvdEnrichmentCache
+from app.models.risk_treatment_history import RiskTreatmentHistory
+from app.models.audit import Audit
+from app.models.audit_finding import AuditFinding
+from app.models.control_review import ControlReview
+from app.models.cisa_kev_entry import CisaKevEntry
+from app.models.epss_score_cache import EpssScoreCache
+from app.models.exploitdb_entry import ExploitDbEntry
