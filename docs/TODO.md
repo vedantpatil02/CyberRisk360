@@ -1,7 +1,7 @@
 # CyberRisk360 — TODO
 
 Working punch list of near-term follow-ups. For the full long-term roadmap
-see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
+see `../PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `architecture.md`
 (Section 16-17).
 
 ## Done
@@ -164,7 +164,7 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       in-place "Access denied" (not a crash/logout) for a
       permitted-but-restricted route, and an invalid/expired token
       correctly redirecting to `/login`. See `ROADMAP.md` Phase 6 and
-      `frontend/README.md`
+      `../frontend/README.md`
 - [x] Phase 6 (partial) - Assets list + detail, reusing the
       `DataTable`/hook/page pattern unchanged - confirms it
       generalizes to a resource whose list and detail endpoints sit at
@@ -207,9 +207,163 @@ see `PRODUCT_DESIGN_DOCUMENT.md` (Section 13) and `ARCHITECTURE.md`
       scope since no endpoint exposes one framework's controls with
       full detail (documented gap, not papered over). Verified
       end-to-end incl. the not-found state. See `ROADMAP.md` Phase 6
+- [x] Phase 6 (partial) - Reports. Landing page (Executive Summary,
+      Technical Vulnerability, framework picker for Compliance
+      Assessment) plus one page per report type rendering Phase 1's
+      `/reports/*` JSON envelope as stat cards/tables, with an
+      authenticated PDF-download control (blob-fetch + synthetic
+      link - a plain `<a href>` can't carry the JWT). Verified
+      end-to-end incl. all three report types, PDF download, and the
+      compliance 404 state. See `ROADMAP.md` Phase 6
+- [x] v1.1-alpha1 - Risk Treatment + Approval workflow (Sprint 1 of
+      the v1.1+ enterprise roadmap). `treatment_type`/
+      `approval_status`/`approved_by`/`approved_at` added to `Risk`
+      (layered on the existing `status` field rather than duplicating
+      it - two new terminal statuses, `Transferred`/`Avoided`,
+      alongside the existing `Mitigated`/`Accepted`), a new
+      `risk_treatment_history` table mirroring `mapping_history`'s
+      shape, and `POST /risks/{id}/treatment` +
+      `PATCH .../treatment/{approve,reject}` +
+      `GET .../treatment/history`. Propose = `COMPLIANCE_ROLES`,
+      approve/reject = `OVERSIGHT_ROLES` (separation of duties).
+      First create/mutate UI + first `useMutation` usage for a
+      resource in the frontend. 198 -> 213 tests. See `ROADMAP.md`'s
+      new v1.1+ section and `workflow.md`
+- [x] Documentation restructure: moved `ARCHITECTURE.md`,
+      `DATABASE.md`, `ROADMAP.md`, `TODO.md`, `CHANGELOG.md` into
+      `docs/`, fixed every cross-reference repo-wide, added
+      `AI_CONTEXT.md` and `workflow.md`
+- [x] Frontend CRUD completion (v1.1-alpha2): Create/Update UI (+
+      Delete for Frameworks) across Vulnerabilities, Assets, Risks,
+      Frameworks - the resources that previously only had read-only
+      list+detail views. Added the one missing backend piece (`GET`/
+      `PUT /assets/{id}`) needed to make Assets editable at all, fixing
+      two real bugs along the way (a route-ordering collision with
+      `/assets/risk-summary`, and an expired-ORM-object-on-response bug
+      identical to one already fixed once before for
+      `update_framework`). No delete added for Vulnerabilities/Assets/
+      Risks - no backend support, and a deliberate call, not an
+      oversight (see `CHANGELOG.md`). 213 -> 218 tests. Verified
+      end-to-end in a real browser for every resource. Imports/
+      Evidence/Admin-Org-management frontend modules remain (separate,
+      larger effort - Evidence is nearly fully backed already)
+- [x] v1.1-alpha3: Audit Management - `Audit`/`AuditFinding` models
+      (net-new GRC audit-engagement entity, not to be confused with
+      the existing `audit_logs` activity trail), full CRUD + close
+      lifecycle + findings, `OVERSIGHT_ROLES` write / `READ_ROLES`
+      read, frontend list+detail+create+edit+close matching the Risks
+      pattern exactly. 218 -> 238 tests. See `CHANGELOG.md`
+- [x] v1.1-alpha4: Control Review Workflow - `ControlReview` model (an
+      audit trail on top of the existing global `Control.status`,
+      deliberately not the separately-deferred per-org control status
+      join table), `POST /controls/{id}/review` (`COMPLIANCE_ROLES`) +
+      `GET /controls/{id}/reviews` (`READ_ROLES`), coexisting with the
+      pre-existing status-only `PATCH` endpoint. Added `id`/`status` to
+      `get_framework_gaps`'s control rows (needed to make review
+      possible from the frontend at all). Frontend: Status column +
+      inline Review form on `FrameworkDetailPage`'s control tables.
+      238 -> 244 tests. See `CHANGELOG.md`
+- [x] v1.1-alpha5 (final v1.1 sprint): Evidence Expiry & Notifications.
+      **v1.1 "GRC Core" is now fully complete.** Optional `expires_at`
+      on evidence attachments; `GET /notifications` computed live at
+      read time (no background job - none exists in this codebase),
+      bucketing expired/expiring-soon evidence; in-app
+      `NotificationBell` in the frontend header per explicit user
+      choice (no email/webhook - no credentials/endpoint available).
+      Found and fixed a real pre-existing bug along the way: evidence
+      upload stamped `org_id` from `org_scope` (None for super-admin)
+      instead of `org_home` (always concrete), crashing uploads by a
+      super-admin. Also fixed the shared test-suite rate limiter to
+      reset per-test automatically instead of relying on opt-in.
+      244 -> 251 tests. See `CHANGELOG.md`
+- [x] v1.2-alpha1 (Sprint 1 of v1.2 "Vulnerability Intelligence"): CISA
+      KEV Integration. New `CisaKevEntry` cache table (whole-catalog
+      fetch/replace on a 24h TTL, lazy refresh - no scheduler needed,
+      confirmed real outbound network access to `www.cisa.gov` before
+      committing); `GET /vulnerabilities/{id}/kev-status`
+      (`admin`/`analyst`/`auditor`); frontend badge on
+      `VulnerabilityDetailPage`. Found and fixed a real DOM-nesting bug
+      via manual browser verification (a `Chip`/`Tooltip` badge nested
+      inside the shared `Field` helper's `<Typography>`-as-`<p>`
+      wrapper - invalid `<p><div>` HTML). Verified end-to-end against
+      the live CISA feed (`CVE-2021-44228`). 251 -> 260 tests. See
+      `CHANGELOG.md`
+- [x] Phase 6 completion - frontend gap-fill. A full frontend-vs-backend
+      audit (user-requested) found 8 features with a working backend
+      but zero UI: evidence upload/list/download/delete, user
+      registration, self-service password change, admin user
+      management (needed two new backend endpoints - `GET /users`,
+      `PATCH /users/{id}/role` - neither existed), the Executive and
+      GRC dashboards, organization (tenant) management, the
+      vulnerability-control mapping review workflow, and scan-report
+      imports. All 8 built, wired into the nav, and verified end-to-end
+      in a live browser session (zero console errors). Found and fixed
+      a real bug along the way: the Users page's role dropdown rendered
+      blank for a `super_admin` row (that role is deliberately excluded
+      from the assignable-roles list) - now shown as a plain chip
+      instead. 260 -> 265 tests. See `CHANGELOG.md`
+- [x] v1.2-alpha2 (Sprint 2 of v1.2 "Vulnerability Intelligence"): EPSS
+      Integration. New `EpssScoreCache` table (per-CVE lookup against
+      FIRST.org, mirroring the NVD enrichment pattern - confirmed real
+      outbound network access to `api.first.org` before committing),
+      with a 24h TTL even on a successful fetch (EPSS scores are
+      recomputed daily, unlike NVD's immutable CVSS/CWE/description
+      data); `GET /vulnerabilities/{id}/epss-score`
+      (`admin`/`analyst`/`auditor`); frontend field on
+      `VulnerabilityDetailPage`, deliberately rendered as a plain
+      `<Tooltip><span>` (not a `Chip`) to avoid repeating the KEV
+      sprint's `<div>`-in-`<p>` DOM-nesting bug. Verified end-to-end
+      against the live FIRST.org feed (`CVE-2021-44228` -> 100.00%).
+      265 -> 275 tests. See `CHANGELOG.md`
+- [x] v1.2-alpha3 (Sprint 3 of v1.2 "Vulnerability Intelligence"): CWE
+      Mapping. Curated static catalog (`frameworks/common/
+      cwe_catalog.json`, real MITRE text - no live API, CWE
+      definitions barely change) for the 11 CWE ids already referenced
+      across the 5 existing `mapping_rules.json` files;
+      `GET /vulnerabilities/{id}/cwe-info` resolves via NVD
+      enrichment's already-cached `cwe_id` (previously fetched and
+      silently discarded) or the mapping engine's own regex
+      extraction (`extract_cwe_ids`, renamed from `_extract_cwe_ids`
+      now that it has two callers); frontend field on
+      `VulnerabilityDetailPage` via a plain `<Link>` (not a `Chip`) to
+      keep dodging the KEV sprint's DOM-nesting bug class. Verified
+      end-to-end against the real NVD API (`CVE-2021-44228` ->
+      `CWE-20`, Improper Input Validation). 275 -> 285 tests. See
+      `CHANGELOG.md`
+- [x] v1.2-alpha4 (Sprint 4 of v1.2 "Vulnerability Intelligence"): CAPEC
+      + MITRE ATT&CK Mapping, delivered together - MITRE's own CAPEC
+      data links both a CWE and (where mapped) an ATT&CK technique, so
+      one curated catalog (`frameworks/common/capec_catalog.json`, 11
+      entries, verified against the real CAPEC CSV) covered both
+      remaining roadmap items, no separate ATT&CK ingestion needed.
+      Extends `GET /vulnerabilities/{id}/cwe-info` with a `capec` key
+      (backward-compatible, not a new endpoint); frontend renders the
+      CAPEC pattern + any ATT&CK technique(s) as more inline links next
+      to the CWE link. Verified end-to-end for both the empty- and
+      populated-`attack_techniques` cases (`CWE-20` -> `CAPEC-120`, no
+      ATT&CK; `CWE-287` -> `CAPEC-115` -> `T1548`). 285 -> 289 tests.
+      See `CHANGELOG.md`
+- [x] v1.2-alpha5 (Sprint 5 of v1.2 "Vulnerability Intelligence"):
+      ExploitDB Lookup. New `ExploitDbEntry` cache table (same whole-
+      catalog-with-TTL shape as CISA KEV - confirmed real outbound
+      network access to the GitLab mirror before committing, since the
+      GitHub repo is a stub redirect - one row per (cve_id, exploit_id)
+      pair since a CVE can have multiple exploits and a row can list
+      multiple CVEs); `GET /vulnerabilities/{id}/exploits`
+      (`admin`/`analyst`/`auditor`); frontend table section (not a
+      `Field` - this is a list) on `VulnerabilityDetailPage`. Verified
+      end-to-end against the live GitLab-hosted CSV
+      (`CVE-2021-44228` -> 3 real linked exploits, matching exactly
+      what was found during planning). 289 -> 301 tests. See
+      `CHANGELOG.md`
 
 ## Next up
 
+- [ ] Last open item in v1.2 Vulnerability Intelligence: business-aware
+      risk scoring (CVSS + EPSS + asset criticality + exposure +
+      business impact + existing controls - purely computational, every
+      input now available: EPSS/KEV/CWE/CAPEC/ATT&CK/ExploitDB all
+      landed this version)
 - [ ] Watch `.github/workflows/backend-ci.yml`'s first real run on
       GitHub - written and YAML-validated here, its steps were run
       manually with identical results (75/75 passing against real

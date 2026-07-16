@@ -1,3 +1,605 @@
+## v1.2-alpha5
+
+Sprint 5 of v1.2 "Vulnerability Intelligence": **ExploitDB Lookup**.
+Network access confirmed via a direct `curl` before committing: the
+GitHub `offensive-security/exploitdb` repo's raw CSV path 404s (a stub
+redirect, flagged in an earlier session), but the real GitLab mirror
+(`gitlab.com/exploit-database/exploitdb`) works.
+
+### Added
+- `ExploitDbEntry` model (table `exploitdb_entries`) - same whole-
+  catalog-cache-with-TTL shape as CISA KEV (Exploit-DB publishes one
+  bulk CSV, ~10MB/47,108 rows, no per-CVE endpoint), but one row per
+  (`cve_id`, `exploit_id`) **pair**, not one row per CVE - a CVE can
+  have multiple exploits and a single Exploit-DB row can list multiple
+  CVEs. Only the ~27,402 rows that reference at least one real CVE are
+  cached (the other ~20k reference OSVDB/BID/etc only, which this
+  system has no use for). Migration `1bb9ebeab100`.
+- `app/services/enrichment/exploitdb.py` - fetches and parses the whole
+  CSV (retry/backoff mirroring `cisa_kev.py`, `timeout=60` for the
+  larger payload), `CATALOG_TTL` 24h, full-replace on refresh (same
+  reasoning as KEV: correctly drops anything Exploit-DB removes,
+  simpler than diffing).
+- `GET /vulnerabilities/{id}/exploits` (`admin`/`analyst`/`auditor` -
+  same tier as the sibling KEV/EPSS/CWE routes). Returns `[]`
+  immediately, no network call, when the vulnerability has no `cve_id`.
+- `app/tests/test_exploitdb.py` (12 tests): no-cve_id short-circuit,
+  fresh/stale cache, full-replace-on-refresh, a CVE with multiple
+  exploits, a CSV row listing multiple CVEs correctly exploded to each,
+  rows without any CVE never cached, retry-then-succeed, network-
+  failure-falls-back-to-existing-cache, endpoint found/404/RBAC.
+  289 -> 301 tests.
+- Frontend: a new "Public Exploits (Exploit-DB)" **table section** on
+  `VulnerabilityDetailPage` (a list, not a scalar value like KEV/EPSS/
+  CWE, so a dedicated table matching "Mapped Controls" rather than a
+  `Field`) - Exploit ID (linked), Title, Type, Platform, Verified,
+  Published; "No known public exploits." when empty.
+
+### Verified
+- Full backend suite green (301/301). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough against the **live** GitLab-hosted
+  CSV (not mocked): vulnerability #1 (`CVE-2021-44228`) correctly shows
+  all 3 real linked exploits (`51183`, `50592`, `50590`, matching
+  exactly what was found during planning) with correct titles/dates/
+  links; a vulnerability with no `cve_id` shows no Exploits section at
+  all. Zero console errors either way. The live fetch+parse of the full
+  ~10MB CSV took ~6 seconds - acceptable for a lazy refresh that happens
+  at most once per 24h.
+
+## v1.2-alpha4
+
+Sprint 4 of v1.2 "Vulnerability Intelligence": **CAPEC + MITRE ATT&CK
+Mapping**, delivered as one sprint (as anticipated in the CWE Mapping
+sprint's own plan) - MITRE's own CAPEC data already links both a CWE
+and, where mapped, an ATT&CK technique, so no separate ATT&CK
+ingestion was needed. No external network dependency, same reasoning
+as CWE Mapping - a small curated static catalog, not a live fetch.
+
+### Added
+- `backend/frameworks/common/capec_catalog.json` (new) - verified
+  against the official MITRE CAPEC catalog
+  (`capec.mitre.org/data/csv/1000.csv.zip`, the 559-pattern
+  "Mechanisms of Attack" view, confirmed reachable). One representative
+  CAPEC attack pattern per CWE already in `cwe_catalog.json` (11
+  entries, same curated scoping), each with its real MITRE ATT&CK
+  technique(s) where one exists - honestly `[]`, not padded, for the 7
+  of 11 that genuinely have no ATT&CK linkage in MITRE's own data.
+- `app/services/enrichment/capec_catalog.py::get_capec_for_cwe(cwe_id)`
+  - loads the catalog via the same `load_framework()` reuse as
+    `cwe_catalog.py`; computes CAPEC/ATT&CK definition URLs
+    deterministically (MITRE's real sub-technique URL scheme: `T1110.001`
+    -> `.../techniques/T1110/001/`).
+- `GET /vulnerabilities/{id}/cwe-info` gains a `capec` key (backward-
+  compatible addition, not a new endpoint - CAPEC is a natural
+  extension of "given this CWE, what's the attack pattern," the same
+  lookup this endpoint already does) -
+  `{capec_id, name, description, url, attack_techniques: [{id, name,
+  url}]}` or `null`.
+- `app/tests/test_cwe_mapping.py` (extended, +4 tests): catalog lookup
+  (known/unknown CWE, sub-technique URL formatting), endpoint `capec`
+  populated with ATT&CK techniques, `capec: null` for the no-CWE and
+  uncatalogued-CWE cases. 285 -> 289 tests.
+- Frontend: `CweValue` extended to render the CAPEC pattern and any
+  ATT&CK technique(s) as more inline `<Link>`s next to the CWE link -
+  `CWE-20: ... · Attack Pattern: CAPEC-120: ...` and, when techniques
+  exist, `· MITRE ATT&CK: T1548: ...`. Same DOM-nesting-safe approach
+  (plain `<a>` elements) as every field added this version.
+
+### Verified
+- Full backend suite green (289/289). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough of both paths: vulnerability #1
+  (`CWE-20` -> `CAPEC-120` Double Encoding) confirmed the empty-
+  `attack_techniques` case renders cleanly with no broken/empty MITRE
+  ATT&CK section; a second vulnerability created via the API with
+  `CWE-287` in its description (`CAPEC-115` Authentication Bypass ->
+  `T1548` Abuse Elevation Control Mechanism) confirmed the populated
+  case renders the full CWE -> CAPEC -> ATT&CK chain correctly. Zero
+  console errors in both.
+
+## v1.2-alpha3
+
+Sprint 3 of v1.2 "Vulnerability Intelligence": **CWE Mapping**. No
+external network dependency - CWE weakness definitions barely change,
+so this ships a small curated static reference catalog instead of a
+live per-request API call (unlike KEV/EPSS).
+
+### Added
+- `backend/frameworks/common/cwe_catalog.json` (new) - real MITRE text
+  (verified against the official CWE CSV catalog,
+  `cwe.mitre.org/data/csv/2000.csv.zip`, confirmed reachable) for the
+  11 CWE IDs already referenced across this codebase's 5 existing
+  `mapping_rules.json` files. First real use of the `frameworks/
+  common/` directory - `categories.json`/`severity_weights.json` sit
+  there too but were never actually loaded by any code.
+- `app/services/enrichment/cwe_catalog.py::get_cwe_info(cwe_id)` -
+  loads the catalog via the existing `framework_loader.load_framework()`
+  utility (reused, not duplicated).
+- `GET /vulnerabilities/{id}/cwe-info` (`admin`/`analyst`/`auditor` -
+  same tier as `/kev-status`/`/epss-score`). Resolves a CWE two ways:
+  (1) the authoritative `cwe_id` NVD enrichment already caches per CVE
+  (previously fetched and immediately discarded - only ever used to
+  backfill a missing description) via `nvd_cache_repository
+  .get_cache_entry()`, or (2) falling back to the mapping engine's own
+  `CWE-\d+` regex extraction from title/description (`mapping_engine
+  .extract_cwe_ids` - renamed from `_extract_cwe_ids` since it now has
+  a second caller) - the same value the mapping engine itself already
+  matches control mappings against. A real-but-uncatalogued CWE id
+  still returns its definitive `cwe.mitre.org` URL rather than being
+  hidden or given a fabricated name.
+- `app/tests/test_cwe_mapping.py` (10 tests): catalog lookup,
+  NVD-cache resolution (incl. preferring it over the regex fallback,
+  and ignoring a `status="failed"` entry), regex fallback, no-CWE-
+  found, real-but-uncatalogued CWE, 404, RBAC. 275 -> 285 tests.
+- Frontend: a "Weakness (CWE)" field next to CVSS/EPSS Score on
+  `VulnerabilityDetailPage`, linking out to the CWE's official
+  definition page with a tooltip description. Rendered as a plain
+  `<Link>` (an `<a>`, not a `<Chip>`) so it goes through the ordinary
+  `Field` component safely - third sprint in a row avoiding Sprint 1's
+  `<div>`-in-`<p>` DOM-nesting bug class.
+
+### Verified
+- Full backend suite green (285/285). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough: triggered the existing (already
+  real) `POST /vulnerabilities/{id}/enrich-cve` on vulnerability #1
+  against the live NVD API, confirmed it cached `CWE-20` (Improper
+  Input Validation) for `CVE-2021-44228` - genuinely different from
+  this plan's own guess of CWE-502, underscoring why the value comes
+  from the real cache rather than being hardcoded - then confirmed the
+  Weakness field renders that exact value with zero console errors.
+
+## v1.2-alpha2
+
+Sprint 2 of v1.2 "Vulnerability Intelligence": **EPSS Integration**.
+Network access to `api.first.org` confirmed reachable before committing
+to this plan (verified via a direct `curl`, not assumed).
+
+### Added
+- `EpssScoreCache` model (table `epss_score_cache`) - one row per CVE:
+  `cve_id` (unique/indexed), `epss_score`, `percentile`, `score_date`
+  (informational), `status` (`"ok"`/`"failed"`), `fetched_at`.
+  Migration `65fe339a2f7c`.
+- `app/services/enrichment/epss_enrichment.py` - per-CVE lookup against
+  FIRST.org's EPSS API (`?cve={id}`), unlike CISA KEV's whole-catalog
+  fetch - structurally the same shape as the existing NVD lookup
+  (`cve_enrichment.py`), which this mirrors closely (same retry/backoff:
+  3 attempts, exponential backoff, retry on timeout/connection-error/
+  5xx/429). One deliberate divergence from NVD: EPSS scores are
+  recomputed daily, so even a `status="ok"` cache entry expires after a
+  24h `SCORE_TTL` and is re-fetched - NVD's CVSS/CWE/description data is
+  immutable once published and is trusted forever.
+- `GET /vulnerabilities/{id}/epss-score` (`admin`/`analyst`/`auditor` -
+  same tier as the sibling `/kev-status` route). Returns
+  `{epss_score: null, percentile: null, date: null}` immediately, with
+  no network call, when the vulnerability has no `cve_id`.
+- `app/tests/test_epss_enrichment.py` (10 tests): no-cve_id short-
+  circuit, fresh-cache-skips-refetch, stale-cache-triggers-refetch,
+  not-found (empty `data`), retry-then-succeed, network-failure-falls-
+  back-to-cached-failure, endpoint found/no-cve_id/not-found/RBAC.
+  265 -> 275 tests.
+- Frontend: an "EPSS Score" field next to CVSS Score on
+  `VulnerabilityDetailPage`, with a tooltip surfacing the percentile
+  rank and score date. Only fetches when the vulnerability has a
+  `cve_id`, same `enabled` gate as the KEV badge. Deliberately rendered
+  as a plain `<Tooltip><span>...</span></Tooltip>` (not a `Chip`) so it
+  goes through the ordinary `Field` component without hitting Sprint
+  1's `<div>`-in-`<p>` DOM-nesting bug class again.
+
+### Verified
+- Full backend suite green (275/275). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough against the **live** FIRST.org feed
+  (not mocked): reused vulnerability #1 (`cve_id` = `CVE-2021-44228`
+  from Sprint 1's verification), confirmed the EPSS Score field renders
+  `100.00%` with the correct tooltip and zero console errors.
+
+## Phase 6 completion — Frontend gap-fill
+
+User-requested audit of the frontend surface against the backend API
+found 8 features that were fully backend-ready but had zero UI: evidence
+management, user registration, self-service password change, admin user
+management (which also needed two new backend endpoints - no `GET
+/users` or role-change endpoint existed at all), the GRC and Executive
+dashboards, organization (tenant) management, the vulnerability-control
+mapping review workflow, and scan-report imports. All eight built and
+verified end-to-end in the same sprint.
+
+### Added
+- **Evidence management UI**: upload (with optional expiry), list,
+  download, and delete, via a shared `EvidenceSection` component wired
+  into both `VulnerabilityDetailPage` and `RiskDetailPage`. Uses the
+  backend's generic `WRITE_ROLES`/`READ_ROLES` (not the narrower
+  per-resource write-role tuples) - a pentester can attach remediation
+  evidence without being able to create/edit the vulnerability or risk
+  itself.
+- **Backend**: `GET /users` (org-scoped, admin-only) and
+  `PATCH /users/{id}/role` (admin-only) - neither existed before this;
+  a real User Management UI needed a way to list users and change
+  roles that the API never exposed. New `ACTION_USER_ROLE_CHANGE` audit
+  action. 6 new tests. 260 -> 265 tests.
+- **User/Account Management page** (`/users`, admin-only): list, change
+  role, activate/deactivate, reset password. `RegisterPage` (`/register`,
+  public) and `AccountPage` (`/account`, self-service password change)
+  round out the account lifecycle that previously had no UI beyond
+  Login.
+- **Executive Dashboard** (`/executive-dashboard`) and **GRC Dashboard**
+  (`/grc-dashboard`, per-framework via a picker) - both `GET
+  /dashboard/executive` and `GET /dashboard/grc/{framework}` existed
+  since Phase 5/6 analytics work but were never surfaced.
+- **Organizations page** (`/organizations`, super-admin only): list and
+  create tenant organizations.
+- **Mapping Review page** (`/mappings/review`): the pending
+  vulnerability-control mapping queue (approve/reject with an optional
+  note), previously only reachable via raw API calls despite being a
+  core part of the mapping engine's design (manual review of
+  auto-suggested mappings). Read-only for auditor; approve/reject
+  restricted to admin/analyst, matching the backend exactly.
+- **Import Report page** (`/imports`): upload a Nessus CSV/XML or PDF
+  report, surfacing the parse + dedupe/import summary. The importer
+  pipeline (Phase 5-era) had zero frontend since it shipped.
+- Nav drawer gained 6 new role-gated entries (Users, Organizations,
+  Executive Dashboard, GRC Dashboard, Mapping Review, Import Report)
+  and an account-icon button in the header linking to `/account`.
+
+### Fixed (found via manual verification, not introduced this sprint)
+- The Users page's role `<Select>` rendered blank for a `super_admin`
+  row, since `super_admin` is deliberately excluded from the
+  assignable-roles list (backend `VALID_ROLES` = `ALL_ROLES`, a
+  platform role can't be assigned via this endpoint) - its current
+  value didn't match any `MenuItem`. Fixed by rendering a plain,
+  non-editable chip for that one case instead of a broken-looking
+  empty dropdown.
+
+### Verified
+- Full backend suite green (265/265). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough of all 8 new pages plus the evidence
+  sections on both detail pages, zero console errors throughout
+  (including after the role-`Select` fix above).
+
+## v1.2-alpha1
+
+Sprint 1 of v1.2 "Vulnerability Intelligence": **CISA KEV Integration**.
+Network access to `www.cisa.gov` confirmed reachable before committing to
+this plan (verified via a direct `curl`, not assumed).
+
+### Added
+- `CisaKevEntry` model (table `cisa_kev_entries`) - one row per catalog
+  entry: `cve_id` (unique/indexed), `vulnerability_name`, `date_added`,
+  `due_date`, `required_action`, `known_ransomware_use`
+  (`knownRansomwareCampaignUse` - `"Known"`/`"Unknown"`), `notes`,
+  `fetched_at`. Migration `d47a9c3e6f18`.
+- `app/services/enrichment/cisa_kev.py` - fetches the whole CISA KEV
+  bulk JSON feed (single feed, ~1,400+ CVEs, no per-CVE endpoint -
+  structurally different from the existing per-CVE NVD/plugin
+  enrichment pattern), caches it locally, refreshes lazily on the next
+  lookup once stale (24h TTL, no scheduler needed). Retry/backoff
+  mirrors `cve_enrichment.py::_fetch_cve` (3 attempts, exponential
+  backoff). `replace_catalog()` does a full replace on refresh, not a
+  diff/upsert - correctly handles CISA removing an entry over time for
+  free.
+- `GET /vulnerabilities/{id}/kev-status` (`admin`/`analyst`/`auditor` -
+  same tier as the sibling `/controls` and `/suggested-controls`
+  routes on this resource). Returns `{in_kev: false}` immediately, with
+  no network call, when the vulnerability has no `cve_id`.
+- `app/tests/test_cisa_kev.py` (9 tests): no-cve_id short-circuit,
+  fresh-cache-skips-refetch, stale-cache-triggers-refetch, empty-cache
+  fetch, retry-then-succeed, network-failure-falls-back-to-existing-
+  cache, endpoint found/not-found/RBAC. 251 -> 260 tests.
+- Frontend: a "CISA Known Exploited" badge next to the CVE ID field on
+  `VulnerabilityDetailPage`, with a tooltip surfacing known-ransomware-
+  use and CISA's remediation due date. Only fetches when the
+  vulnerability has a `cve_id` (`enabled` gate on the query, mirroring
+  the backend's own short-circuit) - no visual noise or extra request
+  for the common case.
+
+### Fixed (found via manual verification, not introduced this sprint)
+- The CVE ID field's badge (a `Chip` inside a `Tooltip`, both rendering
+  `<div>`s) was placed inside the shared `Field` helper's
+  `<Typography variant="body2">` wrapper, which renders a `<p>` -
+  producing invalid `<p><div>...</div></p>` DOM nesting and a React
+  `validateDOMNesting` console warning. Caught by a real headless-
+  browser walkthrough against the live CISA feed, not by `tsc`/`eslint`
+  (both were clean). Fixed by giving the CVE ID row its own Grid cell
+  (matching how Severity/Status already avoid the generic `Field`
+  helper for non-plain-text values) instead of routing the badge
+  through `Field`'s `value` prop.
+
+### Verified
+- Full backend suite green (260/260). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough against the **live** CISA KEV feed
+  (not mocked): set a dev-DB vulnerability's `cve_id` to
+  `CVE-2021-44228` (Log4Shell, confirmed via direct `curl` to still be
+  in the live catalog), opened its detail page, confirmed the badge
+  renders with correct tooltip content and zero console errors after
+  the DOM-nesting fix above.
+
+## v1.1-alpha5
+
+Sprint 5 (final) of v1.1 "GRC Core": **Evidence Expiry & Notifications**
+- **v1.1 is now fully complete.** Per explicit user direction: in-app
+notification list only (no email/webhook - no SMTP/receiving-endpoint
+credentials available; no new background-job infra - no Celery/
+APScheduler in this codebase).
+
+### Added
+- `expires_at` (nullable) on `EvidenceAttachment` - optional at upload
+  time, no expiry by default. Migration `c92e4f018a5d`.
+- Both evidence upload routes (`POST /vulnerabilities/{id}/evidence`,
+  `POST /risks/{id}/evidence`) gain an optional `expires_at` form
+  field alongside the file.
+- `app/analytics/notifications.py::get_notifications` - computed
+  **live at read time**, never stored, same "always fresh" technique
+  already used for SLA breach (`is_sla_breached`). Buckets evidence
+  into `evidence_expired` (past due) and `evidence_expiring_soon`
+  (within 30 days), sorted soonest-first.
+- `GET /notifications` (`READ_ROLES` - visible to any authenticated
+  user, same tier as Dashboard/Reports).
+- `app/tests/test_notifications.py` (6 tests): expired/expiring-soon/
+  far-future/no-expiry buckets, org isolation, sort order. 244 -> 250
+  tests.
+- Frontend: `NotificationBell` (badge + dropdown menu) in the app
+  header - first use of MUI `Menu`/`Badge` in this codebase, same
+  "first use of a standard primitive" tier as last sprint's
+  `stopPropagation()`. Polls every 60s (`refetchInterval`) - no
+  WebSocket/push infra needed for this scope. No frontend Evidence-
+  upload module exists yet (separately flagged, larger future Phase 6
+  item) - this sprint's frontend piece is the bell itself, which works
+  correctly today against evidence created via the API regardless.
+
+### Fixed (found via manual verification, not introduced this sprint)
+- **Real bug**: `POST /risks/{id}/evidence` and
+  `POST /vulnerabilities/{id}/evidence` stamped new rows' `org_id` from
+  `org_scope` (which is `None` for a super-admin - "no read filter"),
+  not `org_home` (always a concrete org - "write under your own org"),
+  the convention every other create endpoint in this codebase already
+  follows correctly (e.g. `POST /risks`). This crashed with a `NOT
+  NULL constraint failed: evidence_attachments.org_id` the moment a
+  super-admin tried to upload evidence - caught by manually exercising
+  the exact feature this sprint touches, not by the test suite (no
+  existing test uploaded evidence as a super-admin). Fixed both
+  routes; added `test_super_admin_can_upload_evidence` regression
+  test. 250 -> 251 tests.
+- **Test-suite flakiness**: the shared, process-wide `slowapi` rate
+  limiter (100/minute, previously reset only via an opt-in
+  `reset_rate_limiter` fixture that most test files never requested)
+  started failing unrelated tests once this sprint's added request
+  volume pushed the full suite's cumulative count over the shared
+  budget within the same 60-second window - reproduced by running the
+  full suite (passed in isolation per-file). Fixed by resetting the
+  limiter in the `client` fixture itself (used by every test), removing
+  the shared budget entirely instead of relying on each new test file
+  to opt in - a fix that scales as the suite keeps growing, not just a
+  patch for this sprint's specific tests.
+
+### Verified
+- Full backend suite green (251/251). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough: uploaded evidence with a past
+  `expires_at` via a direct API call, confirmed it appeared in the
+  notification bell with the correct badge count and message in a live
+  browser session - zero console errors.
+
+### Deferred (explicitly, not silently dropped)
+- Dismiss/read-state for notifications (currently always-fresh/
+  always-shown, matching `sla_breached`'s philosophy).
+- A real scheduler + email/webhook notification target, if ever
+  needed - would need SMTP credentials or a receiving endpoint the
+  user would have to provide.
+
+## v1.1-alpha4
+
+Sprint 4 of v1.1 "GRC Core": **Control Review Workflow** - a formal,
+auditable review event for a control's implementation status (who
+reviewed it, when, what changed, why), layered on top of the existing
+global `Control.status` field. Explicitly does not touch the separately-
+deferred "per-org control implementation status" join table
+(`docs/ROADMAP.md` Phase 4) - that's a distinct, larger architectural
+change, not part of this sprint.
+
+### Added
+- `ControlReview` model (`control_id` FK, `reviewer` string from the
+  JWT - same convention as `MappingHistory.actor`, `previous_status`,
+  `new_status`, `notes`, `org_id`, `reviewed_at`). Migration
+  `f8b12d6e4a91`, verified round-trip.
+- `POST /controls/{id}/review` (`COMPLIANCE_ROLES` - admin/analyst/
+  grc_analyst, an exact match for that group's own documented purpose)
+  and `GET /controls/{id}/reviews` (`READ_ROLES`). Coexists with the
+  pre-existing `PATCH /controls/{id}/status` (unchanged, no trail) -
+  the new endpoint is a superset, not a replacement, preserving
+  backward compatibility.
+- `app/services/controls/control_review.py::submit_review` - snapshots
+  the previous status, applies the new one via the existing
+  `update_control_status`, records the review. Plain history listing
+  stays a direct repository call from the API layer.
+- `analytics/gap_analysis.py::get_framework_gaps`: added `id` (the
+  control's numeric PK) and `status` to each control's row - both
+  needed to make a review action possible from `FrameworkDetailPage`
+  at all, since neither was previously exposed there. Additive,
+  backward-compatible (extra dict keys, nothing removed/changed).
+- `app/tests/test_control_review.py` (6 tests): submit review changes
+  the control's actual status, history ordering, RBAC denial, 404s.
+  238 -> 244 tests.
+- Frontend: no standalone Controls page exists in this app (`GET
+  /controls` is all 465 controls, unfiltered) - the natural, already-
+  existing integration point is `FrameworkDetailPage`'s two
+  `ControlsTable`s, which gain a Status column and a per-row inline
+  "Review" toggle (status select + notes field), gated to
+  `CONTROL_REVIEW_ROLES`.
+
+### Verified
+- Full backend suite green (244/244). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough: opened a framework, submitted a
+  review changing `CIS-1` from `Missing` to `Implemented`, confirmed
+  the Status column updated live - zero console errors.
+
+## v1.1-alpha3
+
+Sprint 3 of v1.1 "GRC Core": **Audit Management** - a GRC audit
+engagement entity (scope, schedule, findings), confirmed net-new in
+earlier research (distinct from the pre-existing `audit_logs` activity
+trail).
+
+### Added
+- `Audit` (`title`, `framework_id` FK nullable, `lead_auditor_id` FK
+  nullable - same convention as `Risk.assignee_id`, `scope`, `status`
+  Planned/In Progress/Completed/Closed, `start_date`/`end_date`,
+  `org_id`, timestamps) and `AuditFinding` (`audit_id` FK, `control_id`
+  FK nullable, `title`, `description`, `severity`, `status`
+  Open/Remediated/Accepted/Closed) models. Migration `a3f7c2e91b4d`,
+  verified round-trip.
+- `POST/GET/PUT /audits`, `GET /audits/{id}`, `PATCH
+  /audits/{id}/close`, `POST/GET /audits/{id}/findings`, `PUT
+  /findings/{id}`. Write (create/update/close audits, create/update
+  findings) = `OVERSIGHT_ROLES` (admin/auditor/ciso/manager - audits
+  are fundamentally an oversight function); read = `READ_ROLES` (all 7
+  roles), matching Reports' precedent.
+- `app/schemas/audit_engagement.py` (not `audit.py` - that name was
+  already taken by the unrelated `AuditLogOut` response schema for the
+  generic activity trail; naming collision caught and avoided during
+  implementation, not after).
+- Plain CRUD calls the repository directly from the API layer (same
+  convention as `api/risks.py`); a thin `audit_workflow.py` service
+  handles the two pieces of real logic (closing, finding-status
+  changes), same justification as the Risk Treatment sprint's
+  `risk_treatment.py`.
+- No delete on either entity - same principle as Risk/Vulnerability/
+  Asset, doubly so for an audit record specifically.
+- `app/tests/test_audits.py` (20 tests): CRUD, close (incl. "already
+  closed" 400), findings CRUD, RBAC denial, cross-org isolation.
+  218 -> 238 tests.
+- Frontend: `AuditsListPage`/`AuditDetailPage`, following the exact
+  list+detail+create+edit+close shape established for Risks, plus a
+  Findings sub-table with an inline add-finding form and a per-finding
+  status dropdown gated the same way. New "Audits" nav item.
+
+### Verified
+- Full backend suite green (238/238). `tsc -b`/`vite build`/`eslint`
+  clean. Real browser walkthrough: create an audit, edit it, add a
+  finding, mark it Remediated, close the audit - zero console errors.
+
+## v1.1-alpha2
+
+Frontend CRUD completion: every existing resource (Vulnerabilities,
+Assets, Risks, Frameworks) gains Create/Update UI (Delete too for
+Frameworks, the only one the backend supports it for), closing out the
+"every module needs List/Detail/Create/Update/Delete/Search/Filtering/
+Pagination/RBAC/Loading/Error/Empty" requirement for the resources that
+already existed on the frontend. Imports/Evidence/Admin/Org-management
+remain a separate follow-up (net-new modules, not a gap in existing ones).
+
+### Added
+- **Assets**: the one real backend gap - no `GET /assets/{id}`, no
+  update at all. Added `GET /assets/{id}` and `PUT /assets/{id}`
+  (`app/schemas/asset_update.py::AssetUpdate`,
+  `asset_repository.py::update_asset`, both `admin`/`analyst` on write,
+  matching `POST /assets`'s existing tier) - both registered *after*
+  the fixed `/assets/risk-summary` path, since this router (like
+  `vulnerabilities.py`) doesn't use an explicit `{id:int}` path
+  converter and Starlette matches routes in registration order, not by
+  segment-count fallback. Caught two real bugs while wiring this up,
+  both via the test suite catching them immediately: (1) the ordering
+  issue just described, surfaced as `/assets/risk-summary` suddenly
+  422ing; (2) `PUT /assets/{id}` returning an emptied object because
+  `update_asset()` commits (expiring the ORM instance) without a
+  `db.refresh()` before the endpoint returns it directly - the exact
+  same bug class already fixed once before for `update_framework`/
+  mapping-approve, now fixed the same way here.
+- `app/tests/test_assets.py`: 5 new tests for the above (GET/PUT happy
+  path, 404s, RBAC denial). 213 -> 218 tests.
+- **Frontend**: `create`/`update` (`delete` for Frameworks) functions +
+  `*_WRITE_ROLES` constants added to every resource's `api/endpoints/
+  *.ts`, one `useMutation`-based hook per action (invalidating the
+  resource's query-key prefix, same pattern as last sprint's
+  `useProposeTreatment`), and inline toggleable forms wired into each
+  List/Detail page - no `Dialog`/modal introduced (still none anywhere
+  in this codebase); Frameworks' Edit/Delete live inline per table row
+  instead of a separate detail-page round trip, since every editable
+  field is already present in the list response. First use of
+  `stopPropagation()` in this codebase (needed for the per-row action
+  buttons inside the Frameworks table's clickable rows).
+- `AssetDetailPage` now also fetches the asset's own fields via the new
+  `GET /assets/{id}`, replacing the previous "these fields aren't
+  available yet" notice with an actual editable field block - the
+  gap flagged as a "real, documented gap, not papered over" in the
+  Phase 6 Assets entry is now closed.
+- Vulnerabilities and Risks both gained UI for their existing-but-
+  previously-unwired `PATCH .../close` endpoint, alongside the new Edit
+  forms.
+- Deliberately **not added**: delete for Vulnerabilities/Assets/Risks -
+  no backend route or repository function exists for any of them, and
+  adding one would be a real retention/compliance decision (hard vs.
+  soft delete, cascade to evidence/mappings), not a UI gap to close
+  silently.
+
+### Verified
+- Full backend suite green (218/218). `tsc -b`/`vite build`/`eslint`
+  clean. Real end-to-end browser walkthrough: create + edit + close a
+  Vulnerability, create + view-own-fields + edit an Asset, create +
+  edit + close a Risk, create + inline-edit + delete a Framework - all
+  confirmed via live DOM assertions (not just "no crash"), zero
+  browser console errors throughout.
+
+## v1.1-alpha1
+
+Sprint 1 of the v1.1 "GRC Core" roadmap: the Risk Treatment + Approval
+workflow, plus a documentation restructure.
+
+### Added
+- **Risk Treatment workflow** (mitigate/accept/transfer/avoid) +
+  **Risk Approval workflow**, layered onto the existing Risk Register
+  rather than duplicating its `status` field: `treatment_type` records
+  what was proposed, and approval drives `status` to the matching
+  terminal value. `Mitigated`/`Accepted` already existed as statuses;
+  two new ones were added for the previously-uncovered outcomes -
+  `RISK_STATUS_TRANSFERRED`, `RISK_STATUS_AVOIDED` (also added to
+  `RISK_TERMINAL_STATUSES` in `app/services/remediation/sla.py`, so a
+  transferred/avoided risk stops accruing SLA breach like the other
+  terminal states).
+  - New `Risk` columns: `treatment_type`, `treatment_justification`,
+    `approval_status`, `approved_by`, `approved_at`. New
+    `risk_treatment_history` table (mirrors `mapping_history`'s shape
+    exactly) recording every proposed/approved/rejected transition.
+    Migration `ed54d857372f`, verified round-trip (upgrade/downgrade/
+    upgrade) against the real dev database.
+  - `POST /risks/{id}/treatment` (propose - `admin`/`analyst`/
+    `grc_analyst`, i.e. `COMPLIANCE_ROLES`), `PATCH .../treatment/
+    {approve,reject}` (`admin`/`auditor`/`ciso`/`manager`, i.e.
+    `OVERSIGHT_ROLES` - deliberately a different tier than propose, so
+    a risk owner can't approve their own treatment), `GET .../
+    treatment/history` (`READ_ROLES`). Structured like the existing
+    vulnerability-control mapping approve/reject workflow
+    (`app/services/mapping/mapping_service.py`) - one commit per
+    transition pairing the state change with a history row, then a
+    separate `record_audit()` call.
+  - New `app/services/risks/risk_treatment.py`,
+    `app/repositories/risks/risk_treatment_history_repository.py`,
+    `app/schemas/risk_treatment.py`. New audit actions
+    `risk.treatment_propose`/`_approve`/`_reject`.
+  - `app/tests/test_risk_treatment.py` (15 tests): propose (happy
+    path, 404, invalid `treatment_type`, RBAC denial, rejected on a
+    closed risk), approve (all 4 treatment types map to the correct
+    terminal status, RBAC denial, no-pending-treatment conflict),
+    reject (reverts to `Open`), and history ordering. 198 -> 213 tests.
+  - Frontend: `RiskDetailPage` gained the first create/mutate UI in
+    this codebase (every other resource is still read-only) - a
+    propose form and an approve/reject form, each gated by
+    `hasRole()` against the corresponding role tuple, plus a
+    treatment-history table. First use of TanStack Query's
+    `useMutation` for a resource (previously only `LoginPage` used
+    it) and the first query-invalidation-after-write in the codebase
+    (`queryClient.invalidateQueries({ queryKey: ['risks'] })`, which
+    covers the detail, every list-page variant, and the history query
+    in one call via prefix matching). Verified end-to-end in a real
+    browser: propose -> pending (Approve/Reject shown) -> approve ->
+    status transitions to `Mitigated`, history shows both rows.
+- **Documentation restructure**: moved `ARCHITECTURE.md`,
+  `DATABASE.md`, `ROADMAP.md`, `TODO.md`, and this file into `docs/`
+  (lowercased `architecture.md`/`database.md` per the new convention),
+  fixed every cross-reference repo-wide (backend docstrings, frontend
+  README, the ADR's reference list, and the docs' own
+  cross-references to each other and to the root-level `README.md`/
+  `PRODUCT_DESIGN_DOCUMENT.md`). Added `AI_CONTEXT.md` (agent-
+  facing project orientation) and `workflow.md` (living reference
+  of every approval-style workflow in the codebase - mapping approval,
+  remediation SLA/evidence, and now risk treatment/approval).
+
 ## Unreleased
 
 ### Added
