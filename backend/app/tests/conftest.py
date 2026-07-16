@@ -102,8 +102,24 @@ def db_session():
 
 @pytest.fixture()
 def client(db_session):
+    # slowapi's Limiter (app/core/rate_limiter.py) is a single
+    # process-wide in-memory store, not scoped per TestClient - as the
+    # suite has grown, its shared 100/minute global budget started
+    # getting exhausted by cumulative request volume across unrelated
+    # test files within the same 60-second window (previously only
+    # guarded per-test via the opt-in reset_rate_limiter fixture, which
+    # nothing but the /login-specific tests requested). Resetting here,
+    # since every test uses this fixture, removes the shared budget
+    # entirely instead of relying on every new test file to remember to
+    # opt in.
+    from app.core.rate_limiter import limiter
+
+    limiter.reset()
+
     with TestClient(app) as test_client:
         yield test_client
+
+    limiter.reset()
 
 
 @pytest.fixture()

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter
@@ -7,10 +8,12 @@ from fastapi import Request
 from fastapi import Query
 from fastapi import UploadFile
 from fastapi import File
+from fastapi import Form
 
 from sqlalchemy.orm import Session
 
 from app.schemas.risk import RiskCreate
+from app.schemas.risk_treatment import RiskTreatmentPropose, RiskTreatmentReview
 
 from app.dependencies.database import get_db
 from app.dependencies.rbac import require_role
@@ -19,6 +22,11 @@ from app.core.constants import *
 
 from app.services.risks.risk import calculate_risk_score, calculate_risk_level
 from app.services.risks.risk_generation import generate_risks_for_assets
+from app.services.risks.risk_treatment import (
+    propose_treatment,
+    review_treatment,
+    get_treatment_history
+)
 from app.services.remediation.evidence import save_evidence, serialize_evidence
 from app.services.remediation.sla import compute_due_date
 from app.schemas.risk_update import RiskUpdate
@@ -46,7 +54,10 @@ from app.services.audit.audit import (
     record_audit,
     client_ip,
     ACTION_RISK_GENERATE,
-    ACTION_RISK_ASSIGN
+    ACTION_RISK_ASSIGN,
+    ACTION_RISK_TREATMENT_PROPOSE,
+    ACTION_RISK_TREATMENT_APPROVE,
+    ACTION_RISK_TREATMENT_REJECT
 )
 
 
@@ -360,6 +371,168 @@ def close_risk(
         "message": "Risk closed"
     }
 
+
+@router.post(
+    "/risks/{risk_id}/treatment"
+)
+def propose_risk_treatment(
+    risk_id: int,
+    treatment: RiskTreatmentPropose,
+    request: Request,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(require_role(*COMPLIANCE_ROLES))
+):
+    """
+    Propose a treatment (mitigate/accept/transfer/avoid) for a risk.
+    Moves status to Under Review pending approval.
+    """
+
+    try:
+        risk = propose_treatment(
+            db,
+            risk_id,
+            treatment_type=treatment.treatment_type,
+            justification=treatment.justification,
+            actor=current_user.get("sub"),
+            org_id=scope
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not risk:
+        raise HTTPException(status_code=404, detail="Risk not found")
+
+    record_audit(
+        db,
+        action=ACTION_RISK_TREATMENT_PROPOSE,
+        actor=current_user.get("sub"),
+        entity_type="risk",
+        entity_id=risk_id,
+        ip_address=client_ip(request),
+        detail=f"treatment_type={treatment.treatment_type}",
+        org_id=risk.org_id,
+    )
+
+    # The audit commit expires `risk`; reload it so the response
+    # serializes its columns rather than an empty object.
+    db.refresh(risk)
+
+    return risk
+
+
+@router.patch(
+    "/risks/{risk_id}/treatment/approve"
+)
+def approve_risk_treatment(
+    risk_id: int,
+    request: Request,
+    review: RiskTreatmentReview = RiskTreatmentReview(),
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(require_role(*OVERSIGHT_ROLES))
+):
+    """
+    Approve a risk's pending treatment. Status moves to the treatment
+    type's terminal value (Mitigated/Accepted/Transferred/Avoided).
+    """
+
+    try:
+        risk = review_treatment(
+            db,
+            risk_id,
+            approve=True,
+            reviewer=current_user.get("sub"),
+            note=review.note,
+            org_id=scope
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not risk:
+        raise HTTPException(status_code=404, detail="Risk not found")
+
+    record_audit(
+        db,
+        action=ACTION_RISK_TREATMENT_APPROVE,
+        actor=current_user.get("sub"),
+        entity_type="risk",
+        entity_id=risk_id,
+        ip_address=client_ip(request),
+        org_id=risk.org_id,
+    )
+
+    db.refresh(risk)
+
+    return risk
+
+
+@router.patch(
+    "/risks/{risk_id}/treatment/reject"
+)
+def reject_risk_treatment(
+    risk_id: int,
+    request: Request,
+    review: RiskTreatmentReview = RiskTreatmentReview(),
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(require_role(*OVERSIGHT_ROLES))
+):
+    """
+    Reject a risk's pending treatment. Status reverts to Open for
+    reconsideration.
+    """
+
+    try:
+        risk = review_treatment(
+            db,
+            risk_id,
+            approve=False,
+            reviewer=current_user.get("sub"),
+            note=review.note,
+            org_id=scope
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not risk:
+        raise HTTPException(status_code=404, detail="Risk not found")
+
+    record_audit(
+        db,
+        action=ACTION_RISK_TREATMENT_REJECT,
+        actor=current_user.get("sub"),
+        entity_type="risk",
+        entity_id=risk_id,
+        ip_address=client_ip(request),
+        org_id=risk.org_id,
+    )
+
+    db.refresh(risk)
+
+    return risk
+
+
+@router.get(
+    "/risks/{risk_id}/treatment/history"
+)
+def get_risk_treatment_history(
+    risk_id: int,
+    db: Session = Depends(get_db),
+    scope=Depends(org_scope),
+    current_user=Depends(require_role(*READ_ROLES))
+):
+    """
+    Return the treatment audit trail for a risk (proposed/approved/
+    rejected).
+    """
+
+    if not db_get_risk(db, risk_id, org_id=scope):
+        raise HTTPException(status_code=404, detail="Risk not found")
+
+    return get_treatment_history(db, risk_id)
+
+
 @router.get("/risk-summary")
 def get_risk_summary(
     db: Session = Depends(get_db),
@@ -418,12 +591,15 @@ def get_risk_summary(
 def upload_risk_evidence(
     risk_id: int,
     file: UploadFile = File(...),
+    expires_at: Optional[datetime] = Form(None),
     db: Session = Depends(get_db),
     scope=Depends(org_scope),
+    org_id=Depends(org_home),
     current_user=Depends(require_role(*WRITE_ROLES))
 ):
     """
-    Upload a remediation-evidence file for a risk.
+    Upload a remediation-evidence file for a risk. Optional
+    `expires_at` drives the in-app notification list.
     """
 
     if not db_get_risk(db, risk_id, org_id=scope):
@@ -438,12 +614,17 @@ def upload_risk_evidence(
         raise HTTPException(status_code=404, detail="User not found")
 
     try:
+        # org_home (not org_scope) - the new row's org_id must be a
+        # concrete org even for a super-admin, whose org_scope is None
+        # (unscoped reads). Same convention every other create
+        # endpoint in this codebase already uses (e.g. POST /risks).
         attachment = save_evidence(
             db,
             file=file,
             uploaded_by_id=uploader.id,
-            org_id=scope,
+            org_id=org_id,
             risk_id=risk_id,
+            expires_at=expires_at,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

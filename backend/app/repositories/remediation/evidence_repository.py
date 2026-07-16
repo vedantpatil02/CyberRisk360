@@ -78,3 +78,22 @@ def delete_evidence_attachment(
 ):
     db.delete(attachment)
     db.commit()
+
+
+def list_with_expiry(
+    db: Session,
+    org_id: int = None
+):
+    """
+    Evidence attachments that have an expires_at set - the candidate
+    set for the notification list (app/analytics/notifications.py).
+    """
+
+    return (
+        _scope(
+            db.query(EvidenceAttachment)
+            .filter(EvidenceAttachment.expires_at.isnot(None)),
+            org_id
+        )
+        .all()
+    )

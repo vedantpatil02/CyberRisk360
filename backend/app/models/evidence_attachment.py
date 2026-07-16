@@ -93,6 +93,16 @@ class EvidenceAttachment(Base):
         nullable=False
     )
 
+    # Optional - no expiry by default. Drives the in-app notification
+    # list (app/analytics/notifications.py), computed live at read
+    # time rather than via a background job (none exists in this
+    # codebase - same "never persisted, always fresh" approach as
+    # is_sla_breached in app/services/remediation/sla.py).
+    expires_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
     vulnerability = relationship("Vulnerability", back_populates="evidence")
     risk = relationship("Risk", back_populates="evidence")
     uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])

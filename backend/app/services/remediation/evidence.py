@@ -31,7 +31,8 @@ def save_evidence(
     uploaded_by_id: int,
     org_id: int,
     vulnerability_id: int = None,
-    risk_id: int = None
+    risk_id: int = None,
+    expires_at=None
 ):
     """
     Validate and persist one evidence upload. Exactly one of
@@ -77,6 +78,7 @@ def save_evidence(
         file_size=len(contents),
         uploaded_by_id=uploaded_by_id,
         org_id=org_id,
+        expires_at=expires_at,
     )
 
 
@@ -98,4 +100,5 @@ def serialize_evidence(attachment):
         "uploaded_by_id": attachment.uploaded_by_id,
         "org_id": attachment.org_id,
         "uploaded_at": attachment.uploaded_at,
+        "expires_at": attachment.expires_at,
     }

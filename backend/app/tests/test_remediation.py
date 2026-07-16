@@ -9,7 +9,7 @@ evidence attachments on vulnerabilities and risks.
 import io
 from datetime import datetime, timedelta, timezone
 
-from app.core.constants import ROLE_ADMIN, ROLE_AUDITOR
+from app.core.constants import ROLE_ADMIN, ROLE_AUDITOR, ROLE_SUPER_ADMIN
 from app.models.organization import Organization
 from app.repositories.users.user_repository import create_user
 
@@ -414,6 +414,33 @@ def test_evidence_cross_org_download_is_404(client, db_session, as_user):
 
     delete_response = client.delete(f"/evidence/{attachment_id}")
     assert delete_response.status_code == 404
+
+
+def test_super_admin_can_upload_evidence(client, db_session, as_user):
+    # Regression: org_id was previously stamped from org_scope (None
+    # for a super-admin - "no read filter") instead of org_home
+    # (always a concrete org), so a super-admin uploading evidence hit
+    # a NOT NULL constraint failure on evidence_attachments.org_id.
+    _seed_uploader(db_session)
+    asset_id = _create_asset(client)
+    risk_id = _create_risk(client, asset_id)
+    vulnerability_id = _create_vulnerability(client, asset_id, risk_id)
+
+    as_user(role=ROLE_SUPER_ADMIN, org_id=ORG1, sub="test@example.com")
+
+    risk_upload = client.post(
+        f"/risks/{risk_id}/evidence",
+        files={"file": ("proof.txt", io.BytesIO(b"data"), "text/plain")}
+    )
+    assert risk_upload.status_code == 200, risk_upload.text
+    assert risk_upload.json()["org_id"] == ORG1
+
+    vuln_upload = client.post(
+        f"/vulnerabilities/{vulnerability_id}/evidence",
+        files={"file": ("proof.txt", io.BytesIO(b"data"), "text/plain")}
+    )
+    assert vuln_upload.status_code == 200, vuln_upload.text
+    assert vuln_upload.json()["org_id"] == ORG1
 
 
 def test_risk_evidence_upload_and_list(client, db_session):
