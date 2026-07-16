@@ -4,7 +4,7 @@ CyberRisk360
 Purpose:
 Regression tests for the Nessus PDF finding parser.
 
-Found via TODO.md: the parser used to take the first IP address
+Found via docs/TODO.md: the parser used to take the first IP address
 anywhere in the whole document and attribute every finding to it,
 regardless of which host's "Vulnerabilities by Host" block the
 finding actually appeared in. A single-host report (the common case,

@@ -113,14 +113,16 @@ CyberRisk360/
 backend/
 frameworks/
 docs/
+    architecture.md
+    database.md
+    ROADMAP.md
+    TODO.md
+    CHANGELOG.md
+    AI_CONTEXT.md
+    workflow.md
 
 README.md
 PRODUCT_DESIGN_DOCUMENT.md
-ARCHITECTURE.md
-DATABASE.md
-ROADMAP.md
-CHANGELOG.md
-API_REFERENCE.md
 ```
 
 ---

@@ -155,7 +155,7 @@ def test_load_rules_merges_frameworks_and_skips_empty():
     load_rules() must merge every framework's mapping_rules.json
     (nist-csf, owasp-top10, and owasp-asvs have real control data;
     cis/iso27001 still reference only their 2-item placeholder
-    controls, blocked on licensing - see ROADMAP.md) without raising,
+    controls, blocked on licensing - see docs/ROADMAP.md) without raising,
     and without ever referencing a framework by name.
     """
 

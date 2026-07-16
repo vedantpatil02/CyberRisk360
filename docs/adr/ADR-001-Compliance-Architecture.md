@@ -433,7 +433,7 @@ This ADR represents the first major architectural decision for CyberRisk360 and 
 
 # References
 
-- PRODUCT_DESIGN_DOCUMENT.md
-- ARCHITECTURE.md
-- DATABASE.md (Planned)
+- ../PRODUCT_DESIGN_DOCUMENT.md
+- architecture.md
+- database.md (Planned)
 - ROADMAP.md

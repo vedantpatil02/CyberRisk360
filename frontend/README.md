@@ -3,7 +3,7 @@
 React + TypeScript + Vite SPA consuming the CyberRisk360 API. This is the
 first slice: **Auth, Dashboard, and Vulnerabilities** only. Assets, Risks,
 Controls, Frameworks, Reports, Imports, Evidence, and Admin/Org management
-are not implemented yet — see `../ROADMAP.md` Phase 6.
+are not implemented yet — see `../docs/ROADMAP.md` Phase 6.
 
 ## Prerequisites
 
