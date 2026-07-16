@@ -80,10 +80,42 @@ class Risk(Base):
         String
     )
 
-    # Open / Mitigated / Accepted / Closed
+    # Open / Under Review / Mitigated / Accepted / Transferred / Avoided
+    # / Closed
     status = Column(
         String,
         default="Open"
+    )
+
+    # Risk Treatment Workflow: mitigate / accept / transfer / avoid -
+    # what was proposed. Approval drives `status` to the matching
+    # terminal value (see app/services/risks/risk_treatment.py).
+    treatment_type = Column(
+        String,
+        nullable=True
+    )
+
+    treatment_justification = Column(
+        String,
+        nullable=True
+    )
+
+    # pending / approved / rejected
+    approval_status = Column(
+        String,
+        nullable=True
+    )
+
+    # Reviewer identity - a string (email), not a User FK, matching the
+    # existing reviewed_by convention on VulnerabilityControlMapping.
+    approved_by = Column(
+        String,
+        nullable=True
+    )
+
+    approved_at = Column(
+        DateTime(timezone=True),
+        nullable=True
     )
 
     # "manual" for user-created risks, "auto" for risks the engine
@@ -136,6 +168,12 @@ class Risk(Base):
 
     evidence = relationship(
         "EvidenceAttachment",
+        back_populates="risk",
+        cascade="all, delete-orphan"
+    )
+
+    treatment_history = relationship(
+        "RiskTreatmentHistory",
         back_populates="risk",
         cascade="all, delete-orphan"
     )

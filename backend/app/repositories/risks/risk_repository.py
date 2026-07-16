@@ -165,3 +165,38 @@ def update_risk(
     db.commit()
 
     return risk
+
+
+def set_treatment_state(
+    db: Session,
+    risk: Risk,
+    status: str,
+    approval_status: str,
+    treatment_type: str = None,
+    treatment_justification: str = None,
+    approved_by: str = None,
+    approved_at: datetime = None
+):
+    """
+    Apply a treatment-workflow state transition to a risk. Flushes
+    (does not commit) - the caller pairs this with a
+    RiskTreatmentHistory entry and commits both together as one
+    atomic review action, same convention as
+    mapping_repository.update_mapping_status.
+    """
+
+    risk.status = status
+    risk.approval_status = approval_status
+
+    if treatment_type is not None:
+        risk.treatment_type = treatment_type
+
+    if treatment_justification is not None:
+        risk.treatment_justification = treatment_justification
+
+    risk.approved_by = approved_by
+    risk.approved_at = approved_at
+
+    db.flush()
+
+    return risk
