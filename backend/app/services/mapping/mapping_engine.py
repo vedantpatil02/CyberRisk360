@@ -111,7 +111,15 @@ def _extract_cve_ids(vulnerability):
     ]
 
 
-def _extract_cwe_ids(vulnerability):
+def extract_cwe_ids(vulnerability):
+    """
+    Regex-extract CWE-\\d+ mentions from a vulnerability's title/
+    description, in first-seen order. Public (not `_`-prefixed) since
+    it now has a second caller - app/api/vulnerabilities.py's
+    /cwe-info endpoint reuses this exact extraction as its fallback
+    when NVD enrichment hasn't cached an authoritative cwe_id.
+    """
+
     text = " ".join(
         part for part in (
             getattr(vulnerability, "title", None),
@@ -152,7 +160,7 @@ def find_candidate_matches(vulnerability, rules=None):
         for control_code in rules[MATCH_TYPE_PLUGIN_ID].get(plugin_id.lower(), []):
             candidates.append((MATCH_TYPE_PLUGIN_ID, plugin_id, control_code))
 
-    for cwe in _extract_cwe_ids(vulnerability):
+    for cwe in extract_cwe_ids(vulnerability):
         for control_code in rules[MATCH_TYPE_CWE].get(cwe.lower(), []):
             candidates.append((MATCH_TYPE_CWE, cwe, control_code))
 

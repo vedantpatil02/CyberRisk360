@@ -1,0 +1,57 @@
+[
+  {
+    "cwe_id": "CWE-20",
+    "name": "Improper Input Validation",
+    "description": "The product receives input or data, but it does not validate or incorrectly validates that the input has the properties that are required to process the data safely and correctly."
+  },
+  {
+    "cwe_id": "CWE-79",
+    "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+    "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users."
+  },
+  {
+    "cwe_id": "CWE-89",
+    "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+    "description": "The product constructs all or part of an SQL command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended SQL command when it is sent to a downstream component. Without sufficient removal or quoting of SQL syntax in user-controllable inputs, the generated SQL query can cause those inputs to be interpreted as SQL instead of ordinary user data."
+  },
+  {
+    "cwe_id": "CWE-200",
+    "name": "Exposure of Sensitive Information to an Unauthorized Actor",
+    "description": "The product exposes sensitive information to an actor that is not explicitly authorized to have access to that information."
+  },
+  {
+    "cwe_id": "CWE-287",
+    "name": "Improper Authentication",
+    "description": "When an actor claims to have a given identity, the product does not prove or insufficiently proves that the claim is correct."
+  },
+  {
+    "cwe_id": "CWE-502",
+    "name": "Deserialization of Untrusted Data",
+    "description": "The product deserializes untrusted data without sufficiently ensuring that the resulting data will be valid."
+  },
+  {
+    "cwe_id": "CWE-521",
+    "name": "Weak Password Requirements",
+    "description": "The product does not require that users should have strong passwords."
+  },
+  {
+    "cwe_id": "CWE-611",
+    "name": "Improper Restriction of XML External Entity Reference",
+    "description": "The product processes an XML document that can contain XML entities with URIs that resolve to documents outside of the intended sphere of control, causing the product to embed incorrect documents into its output."
+  },
+  {
+    "cwe_id": "CWE-798",
+    "name": "Use of Hard-coded Credentials",
+    "description": "The product contains hard-coded credentials, such as a password or cryptographic key."
+  },
+  {
+    "cwe_id": "CWE-918",
+    "name": "Server-Side Request Forgery (SSRF)",
+    "description": "The web server receives a URL or similar request from an upstream component and retrieves the contents of this URL, but it does not sufficiently ensure that the request is being sent to the expected destination."
+  },
+  {
+    "cwe_id": "CWE-1188",
+    "name": "Initialization of a Resource with an Insecure Default",
+    "description": "The product initializes or sets a resource with a default that is intended to be changed by the product's installer, administrator, or maintainer, but the default is not secure."
+  }
+]
