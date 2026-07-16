@@ -59,7 +59,32 @@ RISK_STATUS_OPEN = "Open"
 RISK_STATUS_UNDER_REVIEW = "Under Review"
 RISK_STATUS_MITIGATED = "Mitigated"
 RISK_STATUS_ACCEPTED = "Accepted"
+# Terminal outcomes of the "transfer"/"avoid" treatment types below -
+# Mitigated/Accepted already existed as statuses (treatment predates this
+# workflow); these two were missing since nothing previously recorded a
+# transfer/avoid decision.
+RISK_STATUS_TRANSFERRED = "Transferred"
+RISK_STATUS_AVOIDED = "Avoided"
 RISK_STATUS_CLOSED = "Closed"
+
+# Risk Treatment Workflow: what was proposed. Approval drives
+# Risk.status to the matching terminal value above (see
+# app/services/risks/risk_treatment.py).
+RISK_TREATMENT_MITIGATE = "mitigate"
+RISK_TREATMENT_ACCEPT = "accept"
+RISK_TREATMENT_TRANSFER = "transfer"
+RISK_TREATMENT_AVOID = "avoid"
+
+RISK_TREATMENT_STATUS_BY_TYPE = {
+    RISK_TREATMENT_MITIGATE: RISK_STATUS_MITIGATED,
+    RISK_TREATMENT_ACCEPT: RISK_STATUS_ACCEPTED,
+    RISK_TREATMENT_TRANSFER: RISK_STATUS_TRANSFERRED,
+    RISK_TREATMENT_AVOID: RISK_STATUS_AVOIDED,
+}
+
+RISK_APPROVAL_PENDING = "pending"
+RISK_APPROVAL_APPROVED = "approved"
+RISK_APPROVAL_REJECTED = "rejected"
 
 RISK_LEVEL_LOW = "Low"
 RISK_LEVEL_MEDIUM = "Medium"
@@ -104,6 +129,18 @@ MAPPING_CONFIDENCE_BY_MATCH_TYPE = {
 MAPPING_STATUS_PENDING = "pending"
 MAPPING_STATUS_APPROVED = "approved"
 MAPPING_STATUS_REJECTED = "rejected"
+
+# Audit Management (GRC audit engagements) - distinct from the
+# AuditLog/audit_logs activity trail.
+AUDIT_STATUS_PLANNED = "Planned"
+AUDIT_STATUS_IN_PROGRESS = "In Progress"
+AUDIT_STATUS_COMPLETED = "Completed"
+AUDIT_STATUS_CLOSED = "Closed"
+
+AUDIT_FINDING_STATUS_OPEN = "Open"
+AUDIT_FINDING_STATUS_REMEDIATED = "Remediated"
+AUDIT_FINDING_STATUS_ACCEPTED = "Accepted"
+AUDIT_FINDING_STATUS_CLOSED = "Closed"
 
 import os
 
